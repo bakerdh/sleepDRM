@@ -1,7 +1,7 @@
 ---
 title: "Sleep, relative to wake, increases both veridical and false memory in the DRM paradigm: 
 A registered report"
-author: "Matthew H.C. Mak, Alice O’Hagan, Aidan J Horner, M Gareth Gaskell"
+author: "Matthew H.C. Mak, Alice O’Hagan, Aidan J. Horner, M. Gareth Gaskell"
 date: "Department of Psychology, University of York, UK"
 output:
    bookdown::pdf_document2:
@@ -14,12 +14,15 @@ header-includes:
 bibliography: references.bib
 link-citations: true
 linkcolor: black
-csl: open-biology.csl
+csl: proceedings-of-the-royal-society-b.csl
 ---
 
 ```{r setup, include=FALSE}
 
-packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist')
+processdata <- 0   # running all analyses from scratch takes about 6 hours
+buildfigures <- 0
+
+packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra')
 missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
 if (length(missingpackages)>0){install.packages(missingpackages)}
 toinstall <- packagelist[which(!packagelist %in% (.packages()))]
@@ -55,8 +58,9 @@ studied <- read.csv('data/studied_final.csv')
 raw_fm <- read.csv('data/full.csv')
 material <- read.csv('data/Table 2_Material.csv')
 
-```
+if (processdata==0){load('data/processeddata.RData')}
 
+```
 
 ```{r changelabels}
 lure$Delay <- str_replace_all(lure$Delay, "control", "Immediate/Control")
@@ -66,9 +70,7 @@ lure$Delay <- factor(lure$Delay, levels = c("Immediate/Control","12-hour delay")
 studied$Delay <- str_replace_all(studied$Delay, "control", "Immediate/Control")
 studied$Delay <- str_replace_all(studied$Delay, "delay", "12-hour delay")
 studied$Delay <- factor(studied$Delay, levels = c("Immediate/Control","12-hour delay"))
-```
 
-```{r intrusionsbasic}
 intrusions <- distinct(lure, Participant.Private.ID, .keep_all = T)
 intrusions$answer <- NULL
 intrusions$original_response <- NULL
@@ -76,19 +78,24 @@ intrusions$lure_recalled <- NULL
 ```
 
 ```{r poissonregression}
+
+if (processdata==1){
 intrusion_poisson <- glm(intrusions ~ Delay*Test.Time, data = intrusions, family = poisson(link = "log"))
 
 intrusionout <- emmeans(intrusion_poisson, pairwise ~ Test.Time | Delay)
 #Test time (PM>AM) showed a large effect on output bias
+}
+
 ```
 
 ```{r makeintrusiongraph}
 
 intrusion_CI <- summarySE(data = intrusions, measurevar = "intrusions", groupvars = c("Delay", "Test.Time"), conf.interval = 0.95)
 
-pdf('Figures/intrusiongraph.pdf',width=15,height=12)
+if (buildfigures==1){
+pdf('Figures/intrusiongraph.pdf',width=15,height=10)
 
-ggplot(intrusions%>%
+plothandle <- ggplot(intrusions%>%
          mutate(Test.Time = case_when(Delay=="Immediate/Control"~Test.Time,
                        Test.Time== "AM" ~ "Sleep",
                        TRUE ~ "Wake")) ,
@@ -104,7 +111,457 @@ ggplot(intrusions%>%
   theme_light()+
   theme(legend.position="none",legend.title = element_blank(), axis.title.y = element_text(size=16),plot.title = element_text(size=25, face="bold"), axis.text.x = element_text(size=16),axis.text.y = element_text(size=25),legend.text = element_text(size=25), axis.title=element_text(size=25,face="bold"),strip.text = element_text(size = 25), aspect.ratio =1/1)+ scale_fill_manual(values = c("darkorange", "cornflowerblue", "darkorange", "cornflowerblue" ))+coord_cartesian(ylim = c(0,60))+facet_wrap(~Delay,scales = "free_x")+ geom_dotplot(binaxis = "y", stackdir = "down",dotsize = 0.25)
 
+grid.arrange(plothandle, ncol=1)
+
 dev.off()
+}
+
+```
+
+```{r lurecontrast}
+lure$Delay <- as.factor(lure$Delay)
+contrasts(lure$Delay) <- contr.sum(2)   
+lure$Test.Time <- as.factor(lure$Test.Time)
+contrasts(lure$Test.Time) <- contr.sum(2)
+```
+
+```{r lureGLM}
+
+if (processdata==1){
+lure_model_buildmer <- buildmer(lure_recalled ~ Delay * Test.Time +intrusions +
+                                       (intrusions | Participant.Private.ID) + 
+                                       (Delay * Test.Time| answer), 
+                                     data = lure, 
+                                     family = "binomial",
+                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+
+lure_model <- glmer(formula(lure_model_buildmer), data = lure, family = binomial(link = 'logit'), control = glmerControl(optimizer = 'bobyqa')) 
+
+# pre-registered pair-wise comparison
+lure_pairwise <- emmeans(lure_model, pairwise ~ Test.Time | Delay)
+
+# exploratory analysis to obtain an effect size for the effect of sleep
+lureeffects <- eff_size(lure_pairwise, sigma(lure_model), edf = Inf) 
+}
+
+
+```
+
+```{r lureGLMnointrusions}
+if (processdata==1){
+lure_model_without_covariate_buildmer <- buildmer(lure_recalled ~ Delay * Test.Time +
+                                       (1 | Participant.Private.ID) + 
+                                       (Delay * Test.Time| answer), 
+                                     data = lure, 
+                                     family = "binomial",
+                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+}
+
+```
+
+```{r lureBayesian}
+
+if (processdata==1){
+null_lure <- update(lure_model, formula = ~ . -Delay*Test.Time)
+
+#Bayes Factor
+lureBF <- exp((BIC(null_lure)-BIC(lure_model))/2)
+}
+
+```
+
+```{r lureBayesianSE}
+
+if (processdata==1){
+#simple effects of test time
+lure_immediate <- subset(lure, Delay=="Immediate/Control")
+
+lure_delay <- subset(lure, Delay=="12-hour delay")
+
+#delay
+lure_delay_model1 <- buildmer(lure_recalled ~ Test.Time +intrusions +
+                                       (intrusions | Participant.Private.ID) + 
+                                       (Test.Time| answer), 
+                                     data = lure_delay, 
+                                     family = "binomial",
+                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+
+
+lure_delay_model1_null <- update(lure_delay_model1, formula = ~ . -Test.Time)
+
+luredelayBF <- exp(BIC(lure_delay_model1_null)-BIC(lure_delay_model1))/2 #= 0.001937424
+
+
+#immediate
+lure_immediate_model1 <- buildmer(lure_recalled ~ Test.Time +intrusions +
+                                       (intrusions | Participant.Private.ID) + 
+                                       (Test.Time| answer), 
+                                     data = lure_immediate, 
+                                     family = "binomial",
+                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+
+lure_immediate_model1_null <- update(lure_immediate_model1, formula = ~ . -Test.Time)
+
+lureimmediateBF <- exp(BIC(lure_immediate_model1_null)-BIC(lure_immediate_model1))/2 #= 0.0001069749
+}
+
+
+```
+
+```{r lureposcontrol}
+
+lure_pp <- ddply(lure, .(Delay, Test.Time, Participant.Private.ID), summarise, Lure.Recalled=sum(lure_recalled))
+
+if (processdata==1){
+
+#one sample t-test
+lurettest <- t.test(lure_pp$Lure.Recalled, mu=0) #t = 26.964, df = 487, p-value < 2.2e-16
+
+}
+
+
+```
+
+```{r makeluregraph}
+#confidence interval for graph
+lure_CI <- Rmisc::summarySE(lure_pp, measurevar = "Lure.Recalled", groupvars = c("Delay", "Test.Time"), conf.interval = 0.95)
+
+if (buildfigures==1){
+pdf('Figures/luregraph.pdf',width=15,height=10)
+
+plothandle <- ggplot(lure_pp%>%
+         mutate(Test.Time = case_when(Delay=="Immediate/Control"~Test.Time,
+                       Test.Time== "AM" ~ "Sleep",
+                       TRUE ~ "Wake")) ,
+       aes(Test.Time, Lure.Recalled, fill=Test.Time))+
+  ggdist::stat_halfeye(adjust = .9, width = .7, .width = 0, justification = -.2, point_colour = NA, alpha=0.5) + 
+  stat_summary(fun=mean, geom = "bar", width=0.3)+
+  labs(y="Number of Lures Falsely Recalled (Max = 20)", x="", title="Lure", size=30)+
+  geom_errorbar(width=.1, aes(ymin=Lure.Recalled-ci, ymax=Lure.Recalled+ci), position = position_dodge(width = 0.2), data=lure_CI%>%
+         mutate(Test.Time = case_when(Delay=="Immediate/Control"~Test.Time,
+                       Test.Time== "AM" ~ "Sleep",
+                       TRUE ~ "Wake")))+
+  scale_y_continuous(expand = c(0,0),limits = c(-0.1,15.5),breaks=seq(0,15,2))+
+  theme_light()+
+  theme(legend.position="none",legend.title = element_blank(), axis.title.y = element_text(size=16),plot.title = element_text(size=25, face="bold"), axis.text.x = element_text(size=16),axis.text.y = element_text(size=25),legend.text = element_text(size=25), axis.title=element_text(size=25,face="bold"),strip.text = element_text(size = 25), aspect.ratio =1/1)+ scale_fill_manual(values = c("darkorange", "cornflowerblue", "darkorange", "cornflowerblue" ))+coord_cartesian(ylim = c(-0.1,15.1))+facet_wrap(~Delay,scales = "free_x")+ geom_dotplot(binaxis = "y", stackdir = "down",dotsize = 0.25)
+
+grid.arrange(plothandle, ncol=1)
+
+dev.off()
+}
+
+```
+
+```{r studiededits}
+
+studied$Delay <- as.factor(studied$Delay)
+contrasts(studied$Delay) <- contr.sum(2)   
+studied$Test.Time <- as.factor(studied$Test.Time)
+contrasts(studied$Test.Time) <- contr.sum(2)
+
+```
+
+```{r studiedGLM}
+
+if (processdata==1){
+studied_model_buildmer <- buildmer(studied_recalled ~ Delay * Test.Time +intrusions + (intrusions | Participant.Private.ID) + (Delay * Test.Time| answer), data = studied, family = "binomial",buildmerControl = buildmerControl(direction='backward', args = list(control=glmerControl(optimizer="bobyqa"))))
+
+studied_model <- glmer(formula(studied_model_buildmer), data = studied, family = binomial(link = 'logit'), control = glmerControl(optimizer = 'bobyqa'))
+
+# studied_model <- glmer(formula(studied_model_buildmer), data = studied, family = binomial(link = 'logit'), nAGQ=0, control = glmerControl(optimizer = 'nloptwrap'))
+
+studiedem1 <- emmeans(studied_model, pairwise ~ Test.Time | Delay)
+studiedem2 <- emmeans(studied_model, pairwise ~ Delay | Test.Time)
+}
+
+
+```
+
+```{r studiedBF}
+if (processdata==1){
+null_studied <- update(studied_model, formula = ~ . -Delay*Test.Time)
+
+#Bayes Factor
+studiedBF <- exp((BIC(null_studied)-BIC(studied_model))/2) #29122036
+}
+
+```
+
+```{r studiedBayesian}
+
+if (processdata==1){
+#simple effects of test time
+studied_immediate <- subset(studied, Delay=="Immediate/Control")
+
+studied_delay <- subset(studied, Delay=="12-hour delay")
+
+#delay
+studied_delay_model1 <- buildmer(studied_recalled ~ Test.Time +intrusions +
+                                       (intrusions | Participant.Private.ID) + 
+                                       (Test.Time| answer), 
+                                     data = studied_delay, 
+                                     family = "binomial",
+                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+
+
+studied_delay_model1_null <- update(studied_delay_model1, formula = ~ . -Test.Time)
+
+studdelayBF <- exp(BIC(studied_delay_model1_null)-BIC(studied_delay_model1))/2 #0.01763277
+
+#immediate
+studied_immediate_model1 <- buildmer(studied_recalled ~ Test.Time +intrusions +
+                                       (intrusions | Participant.Private.ID) + 
+                                       (Test.Time| answer), 
+                                     data = studied_immediate, 
+                                     family = "binomial",
+                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+
+
+studied_immediate_model1_null <- update(studied_immediate_model1, formula = ~ . -Test.Time)
+
+studimBF <- exp(BIC(studied_immediate_model1_null)-BIC(studied_immediate_model1))/2 #0.0003863469
+
+}
+```
+
+```{r makestudiedgraph}
+studied_pp <- ddply(studied, .(Delay, Test.Time, Participant.Private.ID), summarise, Studied.Recalled=sum(studied_recalled))
+studied_CI <- Rmisc::summarySE(data = studied_pp, measurevar = "Studied.Recalled", groupvars = c("Delay", "Test.Time"), conf.interval = 0.95)
+
+if (buildfigures==1){
+  pdf('Figures/studiedgraph.pdf',width=15,height=10)
+
+plothandle <- ggplot(studied_pp%>%
+         mutate(Test.Time = case_when(Delay=="Immediate/Control"~Test.Time,
+                       Test.Time== "AM" ~ "Sleep",
+                       TRUE ~ "Wake")) ,
+       aes(Test.Time, Studied.Recalled, fill=Test.Time))+
+  ggdist::stat_halfeye(adjust = .9, width = .7, .width = 0, justification = -.2, point_colour = NA, alpha=0.5) + 
+  stat_summary(fun=mean, geom = "bar", width=0.3)+
+  labs(y="Number of Studied Words Recalled (Max = 160)", x="", title="Studied", size=30)+
+  geom_errorbar(width=.1, aes(ymin=Studied.Recalled-ci, ymax=Studied.Recalled+ci), position = position_dodge(width = 0.2), data=studied_CI%>%
+         mutate(Test.Time = case_when(Delay=="Immediate/Control"~Test.Time,
+                       Test.Time== "AM" ~ "Sleep",
+                       TRUE ~ "Wake")))+
+  scale_y_continuous(expand = c(0,0),limits = c(0,110),breaks=seq(0,110,10))+
+  theme_light()+
+  theme(legend.position="none",legend.title = element_blank(), axis.title.y = element_text(size=16),plot.title = element_text(size=25, face="bold"), axis.text.x = element_text(size=16),axis.text.y = element_text(size=25),legend.text = element_text(size=25), axis.title=element_text(size=25,face="bold"),strip.text = element_text(size = 25), aspect.ratio =1/1)+ scale_fill_manual(values = c("darkorange", "cornflowerblue", "darkorange", "cornflowerblue" ))+coord_cartesian(ylim = c(0,110))+facet_wrap(~Delay,scales = "free_x")+ geom_dotplot(binaxis = "y", stackdir = "down",dotsize = 0.25)
+
+grid.arrange(plothandle, ncol=1)
+
+dev.off()
+
+}
+```
+
+```{r excludeparticipants}
+
+raw_fm <- raw_fm %>% separate(Experiment.ID, c("Delay", "Test.Time")) 
+
+fm <- subset(raw_fm,  subset = !Participant.Private.ID %in% c(7862197,
+7636967,
+7733905,
+7643108,
+7848363,
+8307220,
+8280100,
+8401290,
+8354767,
+8209020,
+7674684,
+7814523,
+7954183,
+8138170,
+8246649,
+8393638,
+7968031,
+7806505,
+8137770,
+8116661,
+8190616,
+7655503,
+7818063,
+7999266,
+8200792,
+8225383,
+8394785,
+7817900,
+7839745,
+8201245,
+8192060,
+7941696,
+7657171,
+8201078,
+8141329,
+7676682,
+8007863,
+8021105,
+7649898,
+8171977,
+8345258,
+8061284,
+8196008,
+8471724,
+8511638,
+8474922,
+8474259))
+
+fm2 <- fm
+fm2$response[fm2$response == ""] <- NA
+
+fm2$filled <- ifelse(is.na(fm2$response), 0, 1)
+
+total <- ddply(fm2, .(Participant.Private.ID, Delay, Test.Time), summarise, total=sum(filled))
+
+# total response per group (Mean and SD)
+ddply(total, .(Delay, Test.Time), summarise, average=mean(total), stdev=sd(total))
+
+# ANOVA
+total_anova <- aov(log10(total) ~ Delay*Test.Time, data = total)
+total_resid <- car::qqPlot(total_anova$residuals, id = FALSE) #looks great
+
+```
+
+```{r recalleffect}
+
+#just some merging for easier manipulation
+studied_pp2 <- select(studied_pp, Participant.Private.ID, Studied.Recalled)
+intrusions2 <- select(intrusions, Participant.Private.ID, intrusions)
+lure_pp_explore <- left_join(lure_pp, studied_pp2, by="Participant.Private.ID")
+lure_pp_explore <- left_join(lure_pp_explore, intrusions2,by="Participant.Private.ID")
+lure_pp_explore_delay <- subset(lure_pp_explore, Delay=="12-hour delay")
+
+#obtain adjusted recall (correct recall - intrusion)
+lure_pp_explore_delay$adjusted_recall <- lure_pp_explore_delay$Studied.Recalled-lure_pp_explore_delay$intrusions
+median(lure_pp_explore_delay$adjusted_recall) # adjusted recall median = 5
+lure_pp_explore_delay$adjusted_recall_binary <- lure_pp_explore_delay$adjusted_recall
+lure_pp_explore_delay$adjusted_recall_binary <- ifelse(lure_pp_explore_delay$adjusted_recall_binary>5, "High performer", "Low performer")
+
+ddply(lure_pp_explore_delay, .(Test.Time,adjusted_recall_binary), summarise, average=mean(Lure.Recalled), stdev=sd(Lure.Recalled))
+
+#poisson regression
+prsum <- summary(lure_explore <- glm(Lure.Recalled ~ Test.Time*adjusted_recall_binary, data = lure_pp_explore_delay, family = poisson(link = "log")))
+
+prem <- emmeans(lure_explore, pairwise ~ Test.Time | adjusted_recall_binary)
+
+#graph (not reported in manuscript)
+#lure_pp_explore_delay$Test.Time <- str_replace_all(lure_pp_explore_delay$Test.Time, "AM", "Sleep")
+#lure_pp_explore_delay$Test.Time <- str_replace_all(lure_pp_explore_delay$Test.Time, "PM", "Wake")
+#ggplot(lure_pp_explore_delay, aes(Test.Time,Lure.Recalled, fill=Test.Time))+stat_summary(fun=mean, geom = "bar")+  stat_summary(fun=mean, geom = "bar", width=0.01,position =position_dodge(width=.01))+scale_y_continuous(expand = c(0,0),limits = c(0,20),breaks=seq(0,20,2))+theme_light()+theme(legend.position="none",legend.title = element_blank(), axis.title.y = element_text(size=16),plot.title = element_text(size=25, face="bold"), axis.text.x = element_text(size=16),axis.text.y = element_text(size=25),legend.text = element_text(size=25), axis.title=element_text(size=25,face="bold"),strip.text = element_text(size = 25), aspect.ratio =1/1)+ scale_fill_manual(values = c("darkorange", "cornflowerblue"))+coord_cartesian(ylim = c(0,20))+ geom_dotplot(binaxis = "y", stackdir = "down",dotsize = 0.25)+facet_wrap(~adjusted_recall_binary)
+
+``` 
+
+```{r dependency}
+
+studied2 <- studied
+
+studied2 <- left_join(studied2, material, by="answer")
+
+studied2_by_lure <- ddply(studied2, .(Participant.Private.ID, lure), summarise, N_per_list = sum(studied_recalled))
+
+lure2 <- lure
+
+lure2 <- rename(lure2, lure = answer)
+
+lure2 <- select(lure2, Participant.Private.ID, Delay, Test.Time, lure, lure_recalled, intrusions)
+
+iota_explore <- left_join(studied2_by_lure, lure2, by=c("Participant.Private.ID", "lure"))
+
+#delay only
+iota_explore_delay <- subset(iota_explore, Delay=="12-hour delay")
+
+#wake group only
+iota_explore_delay_wake <- subset(iota_explore_delay, Test.Time=="PM")
+
+#sleep group only
+iota_explore_delay_sleep <- subset(iota_explore_delay, Test.Time=="AM")
+
+```
+
+```{r allgroups}
+
+if (processdata==1){
+iota_buildmer000 <- buildmer(lure_recalled ~ Delay*Test.Time*N_per_list+ intrusions +
+                               (N_per_list+ intrusions | Participant.Private.ID) + 
+                               (Test.Time| lure), 
+                           data = iota_explore, 
+                           family = "binomial",
+                           buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+
+
+}
+
+#Given the significant Delay1:Test.Time1:N_per_list, we looked at the Immediate and Delay groups separately below
+```
+
+```{r delaygroup}
+if (processdata){
+iota_buildmer2 <- buildmer(lure_recalled ~ Test.Time*N_per_list+ intrusions +
+                                       (N_per_list+ intrusions | Participant.Private.ID) + 
+                                       (Test.Time| lure), 
+                                     data = iota_explore_delay, 
+                                     family = "binomial",
+                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
+
+
+iota_buildmer2_standard <- glmer(formula(iota_buildmer2), data = iota_explore_delay, family = binomial(link = 'logit'), control = glmerControl(optimizer = 'bobyqa'))
+
+
+}
+
+```
+
+```{r immediategroup}
+
+if (processdata){
+iota_explore_immediate <- subset(iota_explore, Delay=="Immediate/Control")
+
+iota_buildmer3_standard <- glmer(lure_recalled ~Test.Time*N_per_list+intrusions+
+                                       (1 | Participant.Private.ID) + 
+                                       (1| lure), data = iota_explore_immediate, family = binomial(link = 'logit'), control = glmerControl(optimizer = 'bobyqa'))
+
+save(file='data/processeddata.RData',list=c('intrusion_poisson','intrusionout','intrusion_CI','lure_model_buildmer','lure_model','lure_pairwise','lureeffects','lure_model_without_covariate_buildmer','null_lure','lureBF','lure_delay_model1','lure_immediate_model1','lure_delay_model1_null','lure_immediate_model1_null','luredelayBF','lureimmediateBF','lurettest','studied_model_buildmer','studied_model','studiedem1','studiedem2','studiedBF','studied_delay_model1','studied_delay_model1_null','studdelayBF','studied_immediate_model1','studied_immediate_model1_null','studimBF','prem','prsum','iota_buildmer000','iota_buildmer2','iota_buildmer2_standard','iota_buildmer3_standard'))
+
+}
+
+```
+
+```{r makedelaygraph}
+
+eff.p1 <- effect("Test.Time:N_per_list", iota_buildmer2_standard, KR=T)
+eff.p1 <- as.data.frame(eff.p1)
+eff.p1$Test.Time <- ifelse(eff.p1$Test.Time=="AM", "Sleep", "Wake")
+
+probabilities <- ddply(iota_explore_delay, .(Participant.Private.ID, Test.Time), summarise, N_per_list_mean=mean(N_per_list), lure_mean=mean(lure_recalled))
+
+
+if (buildfigures==1){
+  
+pdf('Figures/delaygraph.pdf',width=18,height=9)
+
+plot1 <- ggplot(eff.p1, aes(N_per_list, color = Test.Time)) +
+  geom_line(aes(y = fit, group=factor(Test.Time)), size=1.2) +
+  geom_line(aes(y = lower,
+                group=factor(Test.Time)), linetype =3) +
+  geom_line(aes(y = upper,
+                group=factor(Test.Time)), linetype =3) +
+  xlab("Correct recall per list (Max = 8)") +
+  ylab("Lure recall probability") +
+  scale_colour_manual(values = c("darkorange", "cornflowerblue"))+
+  labs(title="Prediction from mixed-effect model",color='Test.Time') + theme_bw()+   theme(legend.title = element_blank(), axis.title.y = element_text(size=20),plot.title = element_text(size=20, face="bold"), axis.text.x = element_text(size=20),axis.text.y = element_text(size=20),legend.text = element_text(size=20), axis.title=element_text(size=20,face="bold"),strip.text = element_text(size = 20), aspect.ratio =1/1)+coord_cartesian(xlim = c(0,8), ylim = c(0,1))+ scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
+
+
+plot2 <- ggplot(probabilities, aes(N_per_list_mean, lure_mean, colour=Test.Time))+geom_point() + geom_smooth(method = "lm", se = TRUE, aes(fill=Test.Time))+ xlab("Mean correct recall per list (Max = 8)") +
+    ylab("Mean lure recall probability") +
+    scale_colour_manual(values = c("darkorange", "cornflowerblue"))+
+    labs(title='Actual data') + theme_bw()+   theme(legend.title = element_blank(), axis.title.y = element_text(size=20),plot.title = element_text(size=20, face="bold"), axis.text.x = element_text(size=20),axis.text.y = element_text(size=20),legend.text = element_text(size=20), axis.title=element_text(size=20,face="bold"),strip.text = element_text(size = 20), aspect.ratio =1/1)+coord_cartesian(xlim = c(0,8), ylim = c(0,1))+ scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
+  
+grid.arrange(plot1, plot2, ncol=2)
+
+dev.off()
+
+}
+
 
 ```
 
@@ -155,7 +612,7 @@ $\text{\underline{\#1 Does overnight sleep (vs. daytime wakefulness) influence D
 
 For this question, the dependent variable was whether a critical lure is recalled or not (i.e., binary). There were two independent variables: Interval (Immediate vs. Delay) and Test Time (9AM vs. 9PM), both of which were manipulated between-participants. In other words, the four groups were coded as in Table 1:
 
-To address Research Question #1, we first tested if any difference between the Sleep and Wake groups was significantly different from that between the AM- and PM-control groups (i.e., an interaction between Interval and Test Time). This is important because it allows us to rule out time-of-day effects. Then, we tested for the simple effect of Test Time (9AM vs. 9PM) within the Immediate and Delay groups. If there is (1) a significant Interval $\times$ Test Time interaction and (2) a significant Test Time effect within the Delay groups (Sleep > Wake), we will be able conclude that sleep (but not time-of-day) increases false recall.  
+To address Research Question \#1, we first tested if any difference between the Sleep and Wake groups was significantly different from that between the AM- and PM-control groups (i.e., an interaction between Interval and Test Time). This is important because it allows us to rule out time-of-day effects. Then, we tested for the simple effect of Test Time (9AM vs. 9PM) within the Immediate and Delay groups. If there is (1) a significant Interval x Test Time interaction and (2) a significant Test Time effect within the Delay groups (Sleep > Wake), we will be able conclude that sleep (but not time-of-day) increases false recall.\footnote{Prior studies in the ‘Sleep $\times$ DRM’ literature (e.g., Fenn et al., 2009; Payne et al., 2009) conducted two separate statistical tests, one comparing Sleep vs. Wake, another comparing AM- vs. PM- controls. They then concluded that Sleep had an effect on DRM false memory beyond time-of-day effects when Test Time was significant in the Sleep vs. Wake comparison ($p$ < 0.05) but not in the AM vs. PM comparison ($p$ > 0.05). Unfortunately, however, this is not sufficient (Nieuwenhuis et al., 2011), as “the difference between ‘significant’ and ‘not significant’ is not itself statistically significant” (Gelmam \& Stern, 2006). Therefore, in order to rule out time-of-day effects, one needs to show that Sleep vs. Wake is significantly different from AM vs. PM-control. This can be captured by an Interval $\times$ Test Time interaction.}  
 
 $\text{\underline{\#2 Does overnight sleep (vs. daytime wakefulness) increase veridical recall of the studied list words?}}$
 
@@ -207,15 +664,21 @@ We acknowledge that previous studies in the ‘Sleep $\times$ DRM’ literature 
 
 # Procedures
 
-The procedure of the study is summarised in Figure 1. The study was hosted on Gorilla (www.gorilla.sc; [@anwyl-irvine2020a]). A study phase took approximately 11 minutes. Here, participants first gave informed consent, completed a language/attention check, rated their level of sleepiness on the Stanford Sleepiness Scale (SSS; [@hoddes1973a]), and viewed 20 DRM wordlists.
+The procedure of the study is summarised in Figure \@ref(fig:expprocedure). The study was hosted on Gorilla (www.gorilla.sc; [@anwyl-irvine2020a]). A study phase took approximately 11 minutes. Here, participants first gave informed consent, completed a language/attention check, rated their level of sleepiness on the Stanford Sleepiness Scale (SSS; [@hoddes1973a]), and viewed 20 DRM wordlists.
 
 Immediately afterwards, participants in the AM/PM-control groups carried out the test phase. For those in the Delay groups, the test phase took place approximately 12 hours later. Here, both the Immediate and Delay participants rated their level of sleepiness on SSS and completed a short survey concerned with, for example, morningness/eveningness preference (rMEQ; [@adan1991a]) and sleep duration/quality the night before (see Appendix B for the full survey). This survey helped determine whether the four groups were matched in terms of time-of-day preference and whether data from a participant needed to be discarded as a result of meeting the exclusion criteria described in section 9. Finally, the test phase concluded with a 10-minute free recall task where participants recalled as many of the words as they could from the previously seen wordlists.
+
+```{r expprocedure, fig.cap="Experimental procedure.", fig.align="center", include=TRUE, echo=FALSE}
+
+knitr::include_graphics('Figures/expprocedure.pdf')
+
+```
 
 ## Exposure to the DRM wordlists.
 
 On the instruction page, participants were told that they would see some English words presented one after the other on the computer screen. They were asked to pay close attention to the words because they would be tested on them later on. No specific instruction was given regarding the subsequent test format. 
 
-During presentation, words in each DRM list were presented visually,   in a fixed order and arranged in descending associative strength to the unpresented critical lure (see Table 2 for order). Each list began with a fixation for 1 s, followed by the first word in a list. Each word was shown for 1 s, in a lowercase black font (Arial, size 26) on a white background, and separated by a 500-ms interstimulus interval. After presentation of the final word in a list was 5 s of blank screen. List order was randomised, and each list was seen once. 
+During presentation, words in each DRM list were presented visually,\footnote{Newbury and Monaghan [@newbury2019a] found no evidence in their meta-analysis that the modality of presentation modulated the effect of sleep. However, in a set of three experiments, Fenn et al. [@fenn2009a] used auditory presentation in one of them and visual in the other two. As far as we are aware, this is the only study in the ‘Sleep x DRM’ literature that had used both modalities in the same set of experiments. Sleep appeared to have a larger effect on false memory when visual (vs. auditory) presentation was used. Given this, we opted for visual presentation in the current experiment. } in a fixed order and arranged in descending associative strength to the unpresented critical lure (see Table 2 for order). Each list began with a fixation for 1 s, followed by the first word in a list. Each word was shown for 1 s, in a lowercase black font (Arial, size 26) on a white background, and separated by a 500-ms interstimulus interval. After presentation of the final word in a list was 5 s of blank screen. List order was randomised, and each list was seen once. 
 
 There was a surprise attention check after the 4th, 9th, 13th, 18th lists, where participants saw an erroneous maths equation such as “3 + 3 = 11”. It was presented for 1 s, in the same font and style as the list words [@thomas2017a]. Immediately afterwards, participants were asked to report what 3 + 3 was according to what was just shown. 
 
@@ -262,7 +725,7 @@ Prior to the confirmatory analyses, we first checked if the four groups were mat
 
 # Data pre-processing
 
-The free recall data were pre-processed. The first step was to remove any duplicate responses. The second was to correct all obvious spelling and typing errors to the nearest English words, defined as Levenstein distance $\leq$ 2 (e.g., *cigerette → cigarette).   Responses with added or dropped inflectional suffixes (i.e., -s, -ed, -ing, adjectival -er) were corrected. Responses with derivational changes were considered as intrusions. For instance, one of the studied words is pollution; if a participant recalled pollutions, the plural suffix was dropped; however, if a participant recalled pollutant, this was considered as an intrusion. 
+The free recall data were pre-processed. The first step was to remove any duplicate responses. The second was to correct all obvious spelling and typing errors to the nearest English words, defined as Levenstein distance $\leq$ 2 (e.g., *cigerette → cigarette).\footnote{If a misspelt response has more than one nearest word, the response was considered as an intrusion.} Responses with added or dropped inflectional suffixes (i.e., -s, -ed, -ing, adjectival -er) were corrected. Responses with derivational changes were considered as intrusions. For instance, one of the studied words is pollution; if a participant recalled pollutions, the plural suffix was dropped; however, if a participant recalled pollutant, this was considered as an intrusion. 
 # Results of Pre-registered Analyses
 
 Following prior studies in the ‘Sleep $\times$ DRM’ literature, we adopted a frequentist approach for all our analyses. The alpha level was set at 0.05. 
@@ -271,8 +734,14 @@ Following prior studies in the ‘Sleep $\times$ DRM’ literature, we adopted a
 We checked if our paradigm consistently elicited the well-established DRM effect across participants. Given free recall, the chance level of a critical lure being produced is 0. We submitted the number of critical lures produced by all participants (Range: 0 to 20) to a one-sample t-test, with the chance level being 0.  It showed that participants were susceptible to false recall [t(487) = 26.96, p < .001], providing evidence for the classic DRM false memory effect.
 
 ## Control analysis.
-Payne et al. [-@payne2009a] found that participants falsely recalled more critical lures post-sleep (vs. post-wake). However, it is possible that participants simply had a greater tendency to put down more unseen words after sleep, not because sleep increases DRM false recall per se. Therefore, before addressing our key research questions, we checked if participants across groups were comparable in terms of their bias in producing unseen items. In Payne et al. [-@payne2009a], this bias was indexed via the number of intrusions (i.e., neither the studied nor the lure items), which was roughly equivalent between their Sleep and Wake groups [MSleep = 5.6 vs. MWake = 6.2; p = .60] as well as between their AM and PM-control groups [MAM = 4.1 vs. MPM = 4.1; p = .99]. To check if this is the case in our data, we used a 2 (Interval: Immediate vs. Delay) $\times$ 2 (Test Time: AM vs. PM) Poisson regression. We chose Poisson regression, as opposed to ANOVA, because the intrusion data were count data, meaning that data distribution were right-skewed and hence unsuitable for ANOVA.  Figure 2 summarises the number of intrusions in each group. 
-     
+Payne et al. [-@payne2009a] found that participants falsely recalled more critical lures post-sleep (vs. post-wake). However, it is possible that participants simply had a greater tendency to put down more unseen words after sleep, not because sleep increases DRM false recall per se. Therefore, before addressing our key research questions, we checked if participants across groups were comparable in terms of their bias in producing unseen items. In Payne et al. [-@payne2009a], this bias was indexed via the number of intrusions (i.e., neither the studied nor the lure items), which was roughly equivalent between their Sleep and Wake groups [MSleep = 5.6 vs. MWake = 6.2; p = .60] as well as between their AM and PM-control groups [MAM = 4.1 vs. MPM = 4.1; p = .99]. To check if this is the case in our data, we used a 2 (Interval: Immediate vs. Delay) $\times$ 2 (Test Time: AM vs. PM) Poisson regression. We chose Poisson regression, as opposed to ANOVA, because the intrusion data were count data, meaning that data distribution were right-skewed and hence unsuitable for ANOVA. Figure \@ref(fig:intrusionfig) summarises the number of intrusions in each group. 
+
+```{r intrusionfig, fig.cap="Number of intrusions produced, summarised across the four groups. Each dot represents an individual participant, and the error bars represent 95\\% confidence intervals.", fig.align="center", include=TRUE, echo=FALSE}
+
+knitr::include_graphics('Figures/intrusiongraph.pdf')
+
+```
+
 A 2 $\times$ 2 Poisson regression revealed significant effects of Interval ($\beta$ = 0.372, SE = 0.054, z = 6.845, p < .001) and Test Time ($\beta$ = 0.185, SE = 0.056, z = 3.299, p < .001), which were qualified by a significant interaction ($\beta$ = 0.214, SE = 0.072, z = 2.96, p = .003). Given this, we tested the simple effects of Test Time within the Immediate and Delay groups using the emmeans package [@lenth2021a]. Within the Immediate groups, the evening participants (M = 5.62; SD = 6.63) produced more intrusions than the morning participants (M = 4.67, SD = 5.97) (z = -3.299, p = .001). Likewise, in the Delay groups, the Wake participants, who completed free recall in the evening (M = 10.1, SD = 13.65), produced more intrusions than the Sleep participants, who completed recall in the morning (M = 6.78; SD = 8.71) (z = -8.808, p = <.001). Together, our data indicate that participants who attempted free recall in the evening (vs. morning) were more prone to intrusions, and this effect was greater in the Delay than in the Immediate groups. These unexpected findings prompted us to explore whether the number of total responses (i.e., studied + lures + intrusions) differed between morning and evening test time. Interestingly, this exploratory analysis (see section 13.1) showed no effect of Test Time. Together, these suggest that attempting free recall in the evening led to a selective increase in intrusions, but not necessarily a global increase in output bias. Finally, given that Test Time had a significant effect on intrusions, we followed our pre-registered analysis plan by adding However, neither Test Time nor their interaction is expected to be significant. If in the unlikely event that these are revealed to be significant, the number of intrusions as a numeric covariate in the 2 $\times$ 2 mixed-effects models below. 
 
 ## Confirmatory analysis 1.
@@ -281,9 +750,15 @@ This analysis addresses our key research question:
 
 $\text{\underline{\#1 Does overnight sleep (vs. daytime wakefulness) influence DRM false recall?}}$
 
-The number of critical lures falsely recalled is summarised across groups in Figure 3.
+The number of critical lures falsely recalled is summarised across groups in Figure \@ref(fig:lurefig).
 
-A generalised linear mixed-effect model (GLMM) was fitted to the critical lure data on the item level (N of observations = 488 participants $\times$ 20 critical lures).  The dependent variable was binary: whether a critical lure was recalled or not (1 vs. 0). The fixed effects were the number of intrusions a participant produced, Interval (Immediate vs. Delay), Test Time (AM vs. PM), and an Interval by Test Time interaction. Interval and Test Time were coded using sum contrasts [@barr2019a]. The random-effect structure was determined by the “buildmer” package [@voeten2021a], which automatically found the maximal model that was capable of converging using backward elimination (with the “bobyqa” optimiser). This means that model selection started from the maximal model, as justified by the experimental design [@barr2013a]. The model we reported and based our interpretation on was the most maximal model that was capable of converging (see the upper half of Table 4 for the final random-effect structure and model output). 
+```{r lurefig, fig.cap="Number of critical lures falsely recalled, summarised across the four groups. Each dot represents an individual participant, and the error bars represent 95\\% confidence intervals.", fig.align="center", include=TRUE, echo=FALSE}
+
+knitr::include_graphics('Figures/luregraph.pdf')
+
+```
+
+A generalised linear mixed-effect model (GLMM) was fitted to the critical lure data on the item level (N of observations = 488 participants $\times$ 20 critical lures).\footnote{The use of GLMM is a clear departure from prior ‘Sleep $\times$ DRM’ studies, the majority of which addressed the same research question using an independent t-test or ANOVA (e.g., Diekelmann et al., 2010; Monaghan et al., 2017; Payne et al., 2009). We explained in Appendix C why these statistical tests are usually not appropriate in the context of DRM recall and why GLMM are more advantageous.}  The dependent variable was binary: whether a critical lure was recalled or not (1 vs. 0). The fixed effects were the number of intrusions a participant produced, Interval (Immediate vs. Delay), Test Time (AM vs. PM), and an Interval by Test Time interaction. Interval and Test Time were coded using sum contrasts [@barr2019a]. The random-effect structure was determined by the “buildmer” package [@voeten2021a], which automatically found the maximal model that was capable of converging using backward elimination (with the “bobyqa” optimiser). This means that model selection started from the maximal model, as justified by the experimental design [@barr2013a]. The model we reported and based our interpretation on was the most maximal model that was capable of converging (see the upper half of Table 4 for the final random-effect structure and model output). 
 
 The number of intrusions had a significant effect on lure recall, such that participants who produced more intrusions tended to recall more critical lures (z = 5.487, p < .001). There were no main effects of Interval or Test Time (zs < 0.95, ps > .34), but there was a significant Interval by Test Time interaction (z = -2.046, p = .041). Following our pre-registered analysis plan, we proceeded to test the simple effects of Test Time within the Immediate and Delay groups, using the emmeans package [@lenth2021a] in R. Among the Immediate groups, there was no significant difference in lure recall between the AM-control and PM-control participants ($\beta$ = -0.098, SE = 0.114, z = -0.859, p = .390). However, among the Delay groups, there was a significant difference ($\beta$ = 0.239, SE = 0.119, z = 2.00, p = .045) such that the Sleep participants (M = 2.73, SD = 2.30) reported more critical lures than the Wake participants (M = 2.51, SD = 2.32).
 
@@ -292,14 +767,20 @@ This analysis addresses the secondary question:
 
 $\text{\underline{\#2 Does overnight sleep (vs. daytime wakefulness) increase veridical recall of the studied list words?}}$
 
-Figure 4 summarises the number of studied list words correctly recalled across groups.
+Figure \@ref(fig:studiedfig) summarises the number of studied list words correctly recalled across groups.
+
+```{r studiedfig, fig.cap="Number of studied list words correctly recalled, summarised across the four groups. Each dot represents an individual participant, and the error bars represent 95\\% confidence intervals.", fig.align="center", include=TRUE, echo=FALSE}
+
+knitr::include_graphics('Figures/studiedgraph.pdf')
+
+```
 
 We fitted a GLMM to the veridical recall dataset (N of observations = 488 participants $\times$ 160 studied words). The dependent variable was whether a studied word was recalled or not. The fixed effects were the the number of intrusions a participant produced, Interval (Immediate vs. Delay), Test Time (AM vs. PM), and an Interval by Test Time interaction. The coding scheme and computation procedure were the same as in the previous analysis. The model output and its random-effect structure are available in the lower half of Table 4. There were no significant effects of intrusions (z = -1.372, p = .170) or Test Time (z = -0.691, p = .489). However, there was a main effect of Interval (z = 7.721, p < .001) such that participants in the Delay groups recalled significantly fewer studied words (M = 15.37, SD = 14.97) than those in the Immediate groups (M = 22.77, SD = 13.59), indicating time-dependent memory decay. Importantly, there was a significant Interval by Test Time interaction (z = -3.324, p < .001), so we broke it down with the emmeans package as pre-registered. Within the Immediate groups, the evening participants (M = 24.36, SD = 14.60) recalled more studied words than the morning participants (M = 21.18, SD = 12.36), although this was not statistically significant ($\beta$ = -0.196, SE = 0.104, z = -1.881, p = .060). Within the Delay groups, there was a main effect of Test Time ($\beta$ = 0.299, SE = 0.107, z = 2.797, p = .005), such that the Sleep participants (M = 17.33, SD = 16.59) outperformed their Wake counterparts (M = 13.41, SD = 12.93). Together, these support the well-established findings that sleep is typically beneficial to the retention of newly encoded declarative memories.
 
 ### Complementary Bayesian analysis
 Although our inference was based on a frequentist approach, we pre-registered to use a Bayesian analysis to complement and test the strength of our results.
 
-Bayes Factors were computed for (1) the Interval $\times$ Test Time interaction in the false and veridical mixed-effect models above, and for the simple effects of Test Time within the (2) Immediate and (3) Delay groups. Following the procedures in Gilbert et al. [@gilbert2018a], a Bayes Factor was computed using the Bayesian Information Criterion (BIC) approximation from two competing GLMMs. For instance, in computing the Bayes Factor for the Interval $\times$ Test Time interaction, two models were needed: An alternative model containing the full fixed-effects structure (Intrusions + Interval + Test Time + Interval $\times$ Test Time), and a null model lacking the interaction.  To estimate the Bayes Factor, we used the formula e $\Delta$BIC10/2, where $\Delta$BIC10 is the BIC for the null model minus the BIC for the alternative model [@masson2011a; @lindelov2018a; @wagenmakers2007a]. This produces a Bayes Factor10, which was interpreted with reference to Lee and Wagenmakers’ [-@wagenmakers2014a] heuristics. The current BIC approximation method has the advantage of being a straightforward solution for mixed-effects models; however, its usage remains controversial as it is known to favour the simpler model (i.e., the null hypothesis; [@lindelov2018a; @vandekerckhove2014a; @weakliem1999a]). Table 5 summarises the Bayes Factors derived from our mixed-effects models.
+Bayes Factors were computed for (1) the Interval $\times$ Test Time interaction in the false and veridical mixed-effect models above, and for the simple effects of Test Time within the (2) Immediate and (3) Delay groups. Following the procedures in Gilbert et al. [@gilbert2018a], a Bayes Factor was computed using the Bayesian Information Criterion (BIC) approximation from two competing GLMMs. For instance, in computing the Bayes Factor for the Interval $\times$ Test Time interaction, two models were needed: An alternative model containing the full fixed-effects structure (Intrusions + Interval + Test Time + Interval $\times$ Test Time), and a null model lacking the interaction.\footnote{To obtain the Bayes Factor for the simple effects of Test Time, the alternative model will contain Test Time as the sole fixed effect while the null model will contain no fixed effects.} To estimate the Bayes Factor, we used the formula e $\Delta$BIC10/2, where $\Delta$BIC10 is the BIC for the null model minus the BIC for the alternative model [@masson2011a; @lindelov2018a; @wagenmakers2007a]. This produces a Bayes Factor10, which was interpreted with reference to Lee and Wagenmakers’ [-@wagenmakers2014a] heuristics. The current BIC approximation method has the advantage of being a straightforward solution for mixed-effects models; however, its usage remains controversial as it is known to favour the simpler model (i.e., the null hypothesis; [@lindelov2018a; @vandekerckhove2014a; @weakliem1999a]). Table 5 summarises the Bayes Factors derived from our mixed-effects models.
 
 Surprisingly, all the Bayes Factors, except for the Interval $\times$ Test Time interaction in the studied word model, were below 0.1. These, according to Lee and Wagenmakers [-@lee2014a], can be taken as extreme evidence for the null hypotheses. In other words, there is a discrepancy between our frequentist and Bayesian analyses. We stress that this Bayesian analysis is complementary in nature and our primary test of significance remains the frequentist test.  
 
@@ -317,17 +798,23 @@ Unlike the intrusion data which had an overall mean of 6.7 and a minimum of 0, t
 
 In 36 participants (18 Sleep and 18 Wake), Diekelmann et al. [-@diekelmann2010a] found that the effect of sleep on DRM false recall was modulated by veridical recall. In their analysis, they performed a post-hoc median split on adjusted veridical recall (i.e., correct recall minus intrusions), separating their participants as either high or low performers. They reported that participants in the Sleep (vs. Wake) group falsely recalled more lures, but only if they were low performers. This finding, as far as we can see, has yet to be replicated, so we explored whether it could be observed in our data, which is more well-suited to test for individual differences given our large sample size.
 
-In this exploratory analysis, we followed Diekelmann et al. [-@diekelmann2010a] by focusing on the Delay groups  and by performing a median split on our sample’s adjusted veridical recall (Median = 5), classifying our participants as either high (>5; N = 117) or low ( $\leq$ 5; N = 123) performers. We followed the analysis approach of Diekelmann et al. [-@diekelmann2010a], but since the number of critical lures a participant produced is count data, we used a 2 (Group: Sleep vs. Wake) $\times$ 2 (Adjusted veridical recall: High vs. Low Performers) Poisson regression, instead of an ANOVA. This analysis showed no main effect of Group ($\beta$ = -0.052, z = -0.494, p = .621) but a main effect of Adjusted veridical recall ($\beta$ = -0.438, z = -3.766, p < .001), such that high performers (M = 3.17, SD = 2.71) tended to falsely recall more critical lures than low performers (M = 2.09, SD = 1.68) ([@thapar2001a; @toglia1999], but see [@cann2011a; @roediger2001a; @stadler1999a]). Furthermore, importantly, the interaction between Group and Adjusted veridical recall was not significant ($\beta$ = 0.049, z = 0.30, p = .763). Despite this, we followed Diekelmann et al. [-@diekelmann2010a] by comparing low performers in the Sleep and Wake groups. Contrary to their findings, emmeans showed that our low performers in both groups recalled essentially the same number of critical lures (MSleep = 2.09, SDSleep = 1.63 vs. Mwake = 2.09, SDWake = 1.74; $\beta$ = 0.133, z = 0.021, p = .982). In other words, this exploratory analysis found no evidence that the effect of sleep on false recall was modulated by veridical memory, casting doubt over the robustness and reliability of Diekelmann et al.’s [-@diekelmann2010a] findings.
+In this exploratory analysis, we followed Diekelmann et al. [-@diekelmann2010a] by focusing on the Delay groups\footnote{Note that Diekelmann et al. (2010) did not have Immediate/Control groups.} and by performing a median split on our sample’s adjusted veridical recall (Median = 5), classifying our participants as either high (>5; N = 117) or low ( $\leq$ 5; N = 123) performers. We followed the analysis approach of Diekelmann et al. [-@diekelmann2010a], but since the number of critical lures a participant produced is count data, we used a 2 (Group: Sleep vs. Wake) $\times$ 2 (Adjusted veridical recall: High vs. Low Performers) Poisson regression, instead of an ANOVA. This analysis showed no main effect of Group ($\beta$ = -0.052, z = -0.494, p = .621) but a main effect of Adjusted veridical recall ($\beta$ = -0.438, z = -3.766, p < .001), such that high performers (M = 3.17, SD = 2.71) tended to falsely recall more critical lures than low performers (M = 2.09, SD = 1.68) ([@thapar2001a; @toglia1999], but see [@cann2011a; @roediger2001a; @stadler1999a]). Furthermore, importantly, the interaction between Group and Adjusted veridical recall was not significant ($\beta$ = 0.049, z = 0.30, p = .763). Despite this, we followed Diekelmann et al. [-@diekelmann2010a] by comparing low performers in the Sleep and Wake groups. Contrary to their findings, emmeans showed that our low performers in both groups recalled essentially the same number of critical lures (MSleep = 2.09, SDSleep = 1.63 vs. Mwake = 2.09, SDWake = 1.74; $\beta$ = 0.133, z = 0.021, p = .982). In other words, this exploratory analysis found no evidence that the effect of sleep on false recall was modulated by veridical memory, casting doubt over the robustness and reliability of Diekelmann et al.’s [-@diekelmann2010a] findings.
 
 ## The relationship between lure and veridical recall on a list level
 
-Here, we asked whether recall probability of a lure (e.g., doctor) is predicted by the number of corresponding list items being recalled (e.g., nurse, hospital, sick), and if it does, whether it differs between the Sleep and Wake groups. These questions help shed light on the degree to which sleep increases lure recall via processes such as retrieval-induced generalisation  or gist abstraction , as these processes may predict a different degree of interdependence between lure and veridical recall. If sleep (vs. wake) promoted retrieval-induced generalisation, lure and veridical recall should become more strongly correlated with each other after sleep, because better veridical recall for a set of studied words may generalise to the corresponding critical lure (or vice versa). On the other hand, if sleep (vs. wake) promoted gist abstraction, lure recall may become less related to memories for the corresponding list items, because theories of gist abstraction such as iOtA may predict that sleep would selectively boost the overlapping gist memory (i.e., the lure) but not necessarily the specific studied words. 
+Here, we asked whether recall probability of a lure (e.g., doctor) is predicted by the number of corresponding list items being recalled (e.g., nurse, hospital, sick), and if it does, whether it differs between the Sleep and Wake groups. These questions help shed light on the degree to which sleep increases lure recall via processes such as retrieval-induced generalisation\footnote{Retrieval-induced generalisation: Retrieval of one word cueing retrieval of a related word (e.g., Berens \& Bird, 2017)} or gist abstraction\footnote{Gist abstraction: Extraction of the central or essential meaning of learned information}, as these processes may predict a different degree of interdependence between lure and veridical recall. If sleep (vs. wake) promoted retrieval-induced generalisation, lure and veridical recall should become more strongly correlated with each other after sleep, because better veridical recall for a set of studied words may generalise to the corresponding critical lure (or vice versa). On the other hand, if sleep (vs. wake) promoted gist abstraction, lure recall may become less related to memories for the corresponding list items, because theories of gist abstraction such as iOtA may predict that sleep would selectively boost the overlapping gist memory (i.e., the lure) but not necessarily the specific studied words. 
 
 In this exploratory analysis, we first calculated a participant’s number of correct recalls per DRM wordlist (Range = 0 - 8) and used this to predict recall of the corresponding critical lure in a generalised mixed-effect model, which had Number of intrusions, Number of correct recall per list, Interval (Immediate vs. Delay), Test Time (AM vs. PM), and an interaction of the latter three as the fixed effects. Interval and Test Time were effect coded, and the random-effect structures contained a by-participant intercept only, as prescribed by the buildmer package. The model output is summarised in Table 6. 
 
 Given the significant three-way interaction, we broke it down by computing two additional GLMMs, one within the Immediate and another within the Delay group. These models had Number of intrusions, Number of correct recall per list, Test Time (AM vs. PM), and an interaction of the latter two as the fixed effects. Table 7 summarises the model outputs.
 
-Across the Immediate and Delay groups, the number of intrusions and correct recall per list both had a main effect (ps $\leq$ .001) such that they were positively correlated with lure recall. However, the effect of Test Time was not significant in either group (ps > .11). Finally, for the Correct recall per list $\times$ Test Time interaction, it was significant in the Delay (z = -3.504, p < .001) but not the Immediate groups (z = -0.037, p = .971). To interpret the former, we used the R package, effects [@fox2022a], to visualise it (see Figure 6A) and plotted lure recall probability against veridical recall on a participant level (see Figure 6B). 
+Across the Immediate and Delay groups, the number of intrusions and correct recall per list both had a main effect (ps $\leq$ .001) such that they were positively correlated with lure recall. However, the effect of Test Time was not significant in either group (ps > .11). Finally, for the Correct recall per list $\times$ Test Time interaction, it was significant in the Delay (z = -3.504, p < .001) but not the Immediate groups (z = -0.037, p = .971). To interpret the former, we used the R package, effects [@fox2022a], to visualise it (see Figure \@ref(fig:delayfig)A) and plotted lure recall probability against veridical recall on a participant level (see Figure \@ref(fig:delayfig)B).
+
+```{r delayfig, fig.cap="(A) Prediction from generalised mixed-effect model on the combined effects of correct recall/list and group (sleep vs. wake) on false recall (B) Correlation between mean lure and studied word recall in the Sleep and Wake groups. Each dot represents an individual participant. Dotted lines/shaded areas represent 95\\% confidence intervals.", fig.align="center", include=TRUE, echo=FALSE}
+
+knitr::include_graphics('Figures/delaygraph.pdf')
+
+```
 
 In line with the previous exploratory analysis on adjusted veridical recall, we found that when a participant recalled more studied items from a DRM wordlist, they were also more likely to recall the corresponding critical lure, suggesting some kind of retrieval-induced generalisation; importantly, however, this effect was weaker in the Sleep than the Wake participants. This finding is striking, especially in light of our confirmatory findings that overall, the Sleep participants produced more critical lures (with intrusions controlled for) and more studied list items than the Wake participants. What this exploratory analysis suggests is that after sleep (vs. wakefulness), whether a lure was recalled may be less reliant on the retrieval of its corresponding studied items, potentially hinting that sleep may affect DRM false memory primarily via some kinds of gist abstraction process.
 
@@ -351,6 +838,6 @@ Finally, having considered the potential reason why evening testing may increase
 
 # Some reflections 
 
-**Mixed evidence in the existing literature**.	Our well-powered registered report had a total sample size of 488, with 120 in each of the Sleep and Wake groups. This far surpasses the sample sizes of prior ‘Sleep $\times$ DRM’ studies, where the median N was 27.6 per group. In our data, the effect of sleep on lure recall was only significant when controlling for differences in intrusion rates, and we checked the size of this sleep effect in an exploratory analysis, putting the estimate at Cohen’s d = 0.274.  This estimate is substantially lower than that from Newbury and Monaghan’s [-@newbury2019a] meta-analysis, which reported to be Cohen’s d = +0.92 (95% CI: 0.54, 1.30). The larger sample size and well-powered nature of our registered report contribute to a more precise estimation of the effect size, highlighting the need for cautious interpretation of prior evidence and the possibility that prior effect sizes may have been inflated due to, for example, publication bias and small sample sizes. Furthermore, given sleep had such a small effect on DRM false memory, it is perhaps not surprising that previous studies had produced mixed evidence. In light of these, we echo the view of a recent article [@cordi2021a] that future sleep research must prioritise robust methodologies (e.g., registered report and pre-registration) and larger sample sizes to enhance the reliability and generalisability of sleep-related memory effects [see also @nemeth2021a].
+**Mixed evidence in the existing literature**.	Our well-powered registered report had a total sample size of 488, with 120 in each of the Sleep and Wake groups. This far surpasses the sample sizes of prior ‘Sleep $\times$ DRM’ studies, where the median N was 27.6 per group. In our data, the effect of sleep on lure recall was only significant when controlling for differences in intrusion rates, and we checked the size of this sleep effect in an exploratory analysis, putting the estimate at Cohen’s d = 0.274.\footnote{We used the eff\_size function in the emmeans package to estimate the effect size of Test Time (sleep vs. wake) in our confirmatory GLM model, with sigma = sigma(lure\_model) and edf = infinite.} This estimate is substantially lower than that from Newbury and Monaghan’s [-@newbury2019a] meta-analysis, which reported to be Cohen’s d = +0.92 (95% CI: 0.54, 1.30). The larger sample size and well-powered nature of our registered report contribute to a more precise estimation of the effect size, highlighting the need for cautious interpretation of prior evidence and the possibility that prior effect sizes may have been inflated due to, for example, publication bias and small sample sizes. Furthermore, given sleep had such a small effect on DRM false memory, it is perhaps not surprising that previous studies had produced mixed evidence. In light of these, we echo the view of a recent article [@cordi2021a] that future sleep research must prioritise robust methodologies (e.g., registered report and pre-registration) and larger sample sizes to enhance the reliability and generalisability of sleep-related memory effects [see also @nemeth2021a].
 
 # References {.unnumbered}
