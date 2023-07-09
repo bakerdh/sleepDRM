@@ -22,7 +22,7 @@ csl: proceedings-of-the-royal-society-b.csl
 processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 0
 
-packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix')
+packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','LSAfun')
 missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
 if (length(missingpackages)>0){install.packages(missingpackages)}
 toinstall <- packagelist[which(!packagelist %in% (.packages()))]
@@ -445,7 +445,7 @@ median(lure_pp_explore_delay$adjusted_recall) # adjusted recall median = 5
 lure_pp_explore_delay$adjusted_recall_binary <- lure_pp_explore_delay$adjusted_recall
 lure_pp_explore_delay$adjusted_recall_binary <- ifelse(lure_pp_explore_delay$adjusted_recall_binary>5, "High performer", "Low performer")
 
-ddply(lure_pp_explore_delay, .(Test.Time,adjusted_recall_binary), summarise, average=mean(Lure.Recalled), stdev=sd(Lure.Recalled))
+premmeans <- ddply(lure_pp_explore_delay, .(Test.Time,adjusted_recall_binary), summarise, average=mean(Lure.Recalled), stdev=sd(Lure.Recalled))
 
 #poisson regression
 prsum <- summary(lure_explore <- glm(Lure.Recalled ~ Test.Time*adjusted_recall_binary, data = lure_pp_explore_delay, family = poisson(link = "log")))
@@ -489,13 +489,8 @@ iota_explore_delay_sleep <- subset(iota_explore_delay, Test.Time=="AM")
 ```{r allgroups}
 
 if (processdata==1){
-iota_buildmer000 <- buildmer(lure_recalled ~ Delay*Test.Time*N_per_list+ intrusions +
-                               (N_per_list+ intrusions | Participant.Private.ID) + 
-                               (Test.Time| lure), 
-                           data = iota_explore, 
-                           family = "binomial",
-                           buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
-
+  
+iota_buildmer000 <- buildmer(lure_recalled ~ Delay*Test.Time*N_per_list+ intrusions + (N_per_list+ intrusions | Participant.Private.ID) + (Test.Time| lure), data = iota_explore, family = "binomial", buildmerControl = buildmerControl(direction='backward', args = list(control=glmerControl(optimizer="bobyqa"))))
 
 }
 
@@ -503,17 +498,13 @@ iota_buildmer000 <- buildmer(lure_recalled ~ Delay*Test.Time*N_per_list+ intrusi
 ```
 
 ```{r delaygroup}
-if (processdata){
-iota_buildmer2 <- buildmer(lure_recalled ~ Test.Time*N_per_list+ intrusions +
-                                       (N_per_list+ intrusions | Participant.Private.ID) + 
-                                       (Test.Time| lure), 
-                                     data = iota_explore_delay, 
-                                     family = "binomial",
-                                     buildmerControl = buildmerControl(direction='backward',args =list(control=glmerControl(optimizer="bobyqa"))))
 
+if (processdata){
+  
+iota_buildmer2 <- buildmer(lure_recalled ~ Test.Time*N_per_list+ intrusions +
+(N_per_list+ intrusions | Participant.Private.ID) + (Test.Time| lure), data = iota_explore_delay, family = "binomial",buildmerControl = buildmerControl(direction='backward',args = list(control=glmerControl(optimizer="bobyqa"))))
 
 iota_buildmer2_standard <- glmer(formula(iota_buildmer2), data = iota_explore_delay, family = binomial(link = 'logit'), control = glmerControl(optimizer = 'bobyqa'))
-
 
 }
 
@@ -522,11 +513,10 @@ iota_buildmer2_standard <- glmer(formula(iota_buildmer2), data = iota_explore_de
 ```{r immediategroup}
 
 if (processdata){
+  
 iota_explore_immediate <- subset(iota_explore, Delay=="Immediate/Control")
 
-iota_buildmer3_standard <- glmer(lure_recalled ~Test.Time*N_per_list+intrusions+
-                                       (1 | Participant.Private.ID) + 
-                                       (1| lure), data = iota_explore_immediate, family = binomial(link = 'logit'), control = glmerControl(optimizer = 'bobyqa'))
+iota_buildmer3_standard <- glmer(lure_recalled ~ Test.Time * N_per_list + intrusions + (1 | Participant.Private.ID) + (1| lure), data = iota_explore_immediate, family = binomial(link = 'logit'), control = glmerControl(optimizer = 'bobyqa'))
 
 save(file='data/processeddata.RData',list=c('intrusion_poisson','intrusionout','intrusion_CI','lure_model_buildmer','lure_model','lure_pairwise','lureeffects','lure_model_without_covariate_buildmer','null_lure','lureBF','lure_delay_model1','lure_immediate_model1','lure_delay_model1_null','lure_immediate_model1_null','luredelayBF','lureimmediateBF','lurettest','studied_model_buildmer','studied_model','studiedem1','studiedem2','studiedBF','studied_delay_model1','studied_delay_model1_null','studdelayBF','studied_immediate_model1','studied_immediate_model1_null','studimBF','prem','prsum','iota_buildmer000','iota_buildmer2','iota_buildmer2_standard','iota_buildmer3_standard'))
 
@@ -567,6 +557,88 @@ plot2 <- ggplot(probabilities, aes(N_per_list_mean, lure_mean, colour=Test.Time)
 grid.arrange(plot1, plot2, ncol=2)
 
 dev.off()
+
+}
+
+
+```
+
+```{r semanticdistance}
+
+# processdata <- 1
+
+if (processdata==1){
+
+osfproject <- osf_retrieve_node("9pdyf")
+osffiles <- osf_ls_files(osfproject,path='Stage 2/Data/Semantic distance (exploratory analysis)/')
+if (!file.exists('data/ukwac_cbow.rda')){
+  hid <- pmatch('ukwac_cbow.rda',as.character(unlist(osffiles[,1])))
+  osf_download(osffiles[hid,], path='data/')
+}
+  
+load('data/ukwac_cbow.rda')  
+  
+lure_item <- head(fm$word, 20)
+
+intrusion_only <- subset(fm, intrusion==1)
+intrusion_item <- intrusion_only$response
+
+my_list <- vector()
+for (i in 1:length(intrusion_item)){
+  new_element <- Cosine(lure_item[1], intrusion_item[i], ukwac)
+  my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[2], intrusion_item[i], ukwac)
+  my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[3], intrusion_item[i], ukwac)
+  my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[4], intrusion_item[i], ukwac)
+  my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[5], intrusion_item[i], ukwac)
+  my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[6], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[7], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[8], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[9], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[10], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[11], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[12], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[13], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[14], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[15], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[16], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[17], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[18], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[19], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  new_element <- Cosine(lure_item[20], intrusion_item[i], ukwac)
+   my_list[[length(my_list) + 1]] <- new_element
+  }
+
+my_list <- as.data.frame(my_list)
+my_list$item <- rep(1:3301, each=20)
+closest <- ddply(my_list, .(item), summarise, closest=max(my_list))
+
+average_closest <- ddply(intrusion_with_distance, .(Participant.Private.ID, Delay, Test.Time), summarise, meanDistance=mean(closest))
+
+ddply(average_closest, .(Delay, Test.Time), summarise, average=mean(meanDistance, na.rm=T), stdev=sd(meanDistance, na.rm = T))
+
+semsum <- summary(semantic_ANOVA <- aov(meanDistance~Delay*Test.Time, data=average_closest))
+semmeans <- emmeans(semantic_ANOVA, pairwise ~ Test.Time | Delay)
+
+save(file='data/processeddata.RData',list=c('intrusion_poisson','intrusionout','intrusion_CI','lure_model_buildmer','lure_model','lure_pairwise','lureeffects','lure_model_without_covariate_buildmer','null_lure','lureBF','lure_delay_model1','lure_immediate_model1','lure_delay_model1_null','lure_immediate_model1_null','luredelayBF','lureimmediateBF','lurettest','studied_model_buildmer','studied_model','studiedem1','studiedem2','studiedBF','studied_delay_model1','studied_delay_model1_null','studdelayBF','studied_immediate_model1','studied_immediate_model1_null','studimBF','prem','prsum','iota_buildmer000','iota_buildmer2','iota_buildmer2_standard','iota_buildmer3_standard','my_list','closest','average_closest','semsum','semmeans'))
 
 }
 
@@ -862,6 +934,9 @@ emout3 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
 temp <- capture.output(studiedem1$contrasts[2])
 emout4 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
 
+temp <- capture.output(prem$contrasts[1])
+emout5 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
+
 luress <- subset(lure_pp, lure_pp$Delay=='12-hour delay')
 meanout1 <- mean(luress$Lure.Recalled[which(luress$Test.Time=='AM')])
 meanout2 <- mean(luress$Lure.Recalled[which(luress$Test.Time=='PM')])
@@ -938,6 +1013,7 @@ knitr::include_graphics('Figures/studiedgraph.pdf')
 We fitted a GLMM to the veridical recall dataset (N of observations = 488 participants $\times$ 160 studied words). The dependent variable was whether a studied word was recalled or not. The fixed effects were the the number of intrusions a participant produced, Interval (Immediate vs. Delay), Test Time (AM vs. PM), and an Interval by Test Time interaction. The coding scheme and computation procedure were the same as in the previous analysis. The model output and its random-effect structure are available in the lower half of Table \@ref(tab:table4). There were no significant effects of intrusions (z = `r table4bdata[3,4]`, p = `r table4bdata[3,5]`) or Test Time (z = `r table4bdata[5,4]`, p = `r table4bdata[5,5]`). However, there was a main effect of Interval (z = `r table4bdata[4,4]`, p `r p_format(smout[2,4],digits=3,accuracy=0.001,leading.zero=FALSE)`) such that participants in the Delay groups recalled significantly fewer studied words (M = `r round(mean(studied_delpp$Studied.Recalled),digits=2)`, SD = `r round(sd(studied_delpp$Studied.Recalled),digits=2)`) than those in the Immediate groups (M = `r round(mean(studied_impp$Studied.Recalled),digits=2)`, SD = `r round(sd(studied_impp$Studied.Recalled),digits=2)`), indicating time-dependent memory decay. Importantly, there was a significant Interval by Test Time interaction (z = `r table4bdata[6,4]`, p `r table4bdata[6,5]`), so we broke it down with the emmeans package as pre-registered. Within the Immediate groups, the evening participants (M = `r round(studied_CI[2,4],digits=2)`, SD = `r round(studied_CI[2,5],digits=2)`) recalled more studied words than the morning participants (M = `r round(studied_CI[1,4],digits=2)`, SD = `r round(studied_CI[1,5],digits=2)`), although this was not statistically significant ($\beta$ = `r emout3[6]`, SE = `r emout3[7]`, z = `r round(as.numeric(emout3[9]),digits=2)`, p = `r p_format(as.numeric(emout3[10]),leading.zero=F,digits=2)`). Within the Delay groups, there was a main effect of Test Time ($\beta$ = `r emout4[7]`, SE = `r emout4[8]`, z = `r round(as.numeric(emout4[10]),digits=3)`, p = `r p_format(as.numeric(emout4[11]),leading.zero=F,digits=2)`), such that the Sleep participants (M = `r round(studied_CI[3,4],digits=2)`, SD = `r round(studied_CI[3,5],digits=2)`) outperformed their Wake counterparts (M = `r round(studied_CI[4,4],digits=2)`, SD = `r round(studied_CI[4,5],digits=2)`). Together, these support the well-established findings that sleep is typically beneficial to the retention of newly encoded declarative memories.
 
 ### Complementary Bayesian analysis
+
 Although our inference was based on a frequentist approach, we pre-registered to use a Bayesian analysis to complement and test the strength of our results.
 
 Bayes Factors were computed for (1) the Interval $\times$ Test Time interaction in the false and veridical mixed-effect models above, and for the simple effects of Test Time within the (2) Immediate and (3) Delay groups. Following the procedures in Gilbert et al. [@gilbert2018a], a Bayes Factor was computed using the Bayesian Information Criterion (BIC) approximation from two competing GLMMs. For instance, in computing the Bayes Factor for the Interval $\times$ Test Time interaction, two models were needed: An alternative model containing the full fixed-effects structure (Intrusions + Interval + Test Time + Interval $\times$ Test Time), and a null model lacking the interaction.\footnote{To obtain the Bayes Factor for the simple effects of Test Time, the alternative model will contain Test Time as the sole fixed effect while the null model will contain no fixed effects.} To estimate the Bayes Factor, we used the formula e $e{\Delta BIC_{10}/2}$, where $\Delta BIC_{10}$ is the BIC for the null model minus the BIC for the alternative model [@masson2011a; @lindelov2018a; @wagenmakers2007a]. This produces a Bayes Factor$_{10}$, which was interpreted with reference to Lee and Wagenmakers’ [-@lee2014a] heuristics. The current BIC approximation method has the advantage of being a straightforward solution for mixed-effects models; however, its usage remains controversial as it is known to favour the simpler model (i.e., the null hypothesis; [@lindelov2018a; @vandekerckhove2014a; @weakliem1999a]). Table \@ref(tab:table5) summarises the Bayes Factors derived from our mixed-effects models.
@@ -978,7 +1054,7 @@ Unlike the intrusion data which had an overall mean of `r round(mean(intrusions$
 
 In 36 participants (18 Sleep and 18 Wake), Diekelmann et al. [-@diekelmann2010a] found that the effect of sleep on DRM false recall was modulated by veridical recall. In their analysis, they performed a post-hoc median split on adjusted veridical recall (i.e., correct recall minus intrusions), separating their participants as either high or low performers. They reported that participants in the Sleep (vs. Wake) group falsely recalled more lures, but only if they were low performers. This finding, as far as we can see, has yet to be replicated, so we explored whether it could be observed in our data, which is more well-suited to test for individual differences given our large sample size.
 
-In this exploratory analysis, we followed Diekelmann et al. [-@diekelmann2010a] by focusing on the Delay groups\footnote{Note that Diekelmann et al. (2010) did not have Immediate/Control groups.} and by performing a median split on our sample’s adjusted veridical recall (Median = 5), classifying our participants as either high (>5; N = 117) or low ( $\leq$ 5; N = 123) performers. We followed the analysis approach of Diekelmann et al. [-@diekelmann2010a], but since the number of critical lures a participant produced is count data, we used a 2 (Group: Sleep vs. Wake) $\times$ 2 (Adjusted veridical recall: High vs. Low Performers) Poisson regression, instead of an ANOVA. This analysis showed no main effect of Group ($\beta$ = -0.052, z = -0.494, p = .621) but a main effect of Adjusted veridical recall ($\beta$ = -0.438, z = -3.766, p < .001), such that high performers (M = 3.17, SD = 2.71) tended to falsely recall more critical lures than low performers (M = 2.09, SD = 1.68) ([@thapar2001a; @toglia1999], but see [@cann2011a; @roediger2001a; @stadler1999a]). Furthermore, importantly, the interaction between Group and Adjusted veridical recall was not significant ($\beta$ = 0.049, z = 0.30, p = .763). Despite this, we followed Diekelmann et al. [-@diekelmann2010a] by comparing low performers in the Sleep and Wake groups. Contrary to their findings, emmeans showed that our low performers in both groups recalled essentially the same number of critical lures (MSleep = 2.09, SDSleep = 1.63 vs. Mwake = 2.09, SDWake = 1.74; $\beta$ = 0.133, z = 0.021, p = .982). In other words, this exploratory analysis found no evidence that the effect of sleep on false recall was modulated by veridical memory, casting doubt over the robustness and reliability of Diekelmann et al.’s [-@diekelmann2010a] findings.
+In this exploratory analysis, we followed Diekelmann et al. [-@diekelmann2010a] by focusing on the Delay groups\footnote{Note that Diekelmann et al. (2010) did not have Immediate/Control groups.} and by performing a median split on our sample’s adjusted veridical recall (Median = 5), classifying our participants as either high (>5; N = 117) or low ($\leq$ 5; N = 123) performers. We followed the analysis approach of Diekelmann et al. [-@diekelmann2010a], but since the number of critical lures a participant produced is count data, we used a 2 (Group: Sleep vs. Wake) $\times$ 2 (Adjusted veridical recall: High vs. Low Performers) Poisson regression, instead of an ANOVA. This analysis showed no main effect of Group ($\beta$ = `r round(as.numeric(emout5[7]),digits=3)`, z = `r round(as.numeric(emout5[10]),digits=3)`, p = `r p_format(as.numeric(emout5[11]),digits=3,leading.zero=F)`) but a main effect of Adjusted veridical recall ($\beta$ = -0.438, z = -3.766, p < .001), such that high performers (M = 3.17, SD = 2.71) tended to falsely recall more critical lures than low performers (M = 2.09, SD = 1.68) ([@thapar2001a; @toglia1999], but see [@cann2011a; @roediger2001a; @stadler1999a]). Furthermore, importantly, the interaction between Group and Adjusted veridical recall was not significant ($\beta$ = 0.049, z = 0.30, p = .763). Despite this, we followed Diekelmann et al. [-@diekelmann2010a] by comparing low performers in the Sleep and Wake groups. Contrary to their findings, emmeans showed that our low performers in both groups recalled essentially the same number of critical lures (M$_{Sleep}$ = `r round(premmeans[2,3],digits=2)`, SD$_{Sleep}$ = `r round(premmeans[2,4],digits=2)` vs. M$_{Wake}$ = `r round(premmeans[4,3],digits=2)`, SD$_{Wake}$ = `r round(premmeans[4,4],digits=2)`; $\beta$ = 0.133, z = 0.021, p = .982). In other words, this exploratory analysis found no evidence that the effect of sleep on false recall was modulated by veridical memory, casting doubt over the robustness and reliability of Diekelmann et al.’s [-@diekelmann2010a] findings.
 
 ## The relationship between lure and veridical recall on a list level
 
@@ -1039,7 +1115,7 @@ knitr::kable(table7data, booktabs = T, caption='Outputs from the exploratory gen
 
 ```
 
-Across the Immediate and Delay groups, the number of intrusions and correct recall per list both had a main effect (ps $\leq$ .001) such that they were positively correlated with lure recall. However, the effect of Test Time was not significant in either group (ps > .11). Finally, for the Correct recall per list $\times$ Test Time interaction, it was significant in the Delay (z = -3.504, p < .001) but not the Immediate groups (z = -0.037, p = .971). To interpret the former, we used the R package, effects [@fox2022a], to visualise it (see Figure \@ref(fig:delayfig)A) and plotted lure recall probability against veridical recall on a participant level (see Figure \@ref(fig:delayfig)B).
+Across the Immediate and Delay groups, the number of intrusions and correct recall per list both had a main effect (ps $\leq$ .001) such that they were positively correlated with lure recall. However, the effect of Test Time was not significant in either group (ps > .11). Finally, for the Correct recall per list $\times$ Test Time interaction, it was significant in the Delay (z = `r round(modout2[5,3],digits=3)`, p `r p_format(modout2[5,4],digits=3,accuracy=0.001,leading.zero=F)`) but not the Immediate groups (z = `r round(modout1[5,3],digits=3)`, p = `r p_format(modout1[5,4],digits=3,accuracy=0.001,leading.zero=F)`). To interpret the former, we used the R package, effects [@fox2022a], to visualise it (see Figure \@ref(fig:delayfig)A) and plotted lure recall probability against veridical recall on a participant level (see Figure \@ref(fig:delayfig)B).
 
 ```{r delayfig, fig.cap="(A) Prediction from generalised mixed-effect model on the combined effects of correct recall/list and group (sleep vs. wake) on false recall (B) Correlation between mean lure and studied word recall in the Sleep and Wake groups. Each dot represents an individual participant. Dotted lines/shaded areas represent 95\\% confidence intervals.", fig.align="center", include=TRUE, echo=FALSE}
 
