@@ -10,7 +10,11 @@ output:
     fig_caption: yes
 header-includes:
   # - \usepackage{setspace}\doublespacing
-  - \usepackage{caption}
+  \usepackage{caption}
+  \usepackage{float} \floatplacement{figure}{H} 
+  \newcommand{\beginsupplement}{\setcounter{table}{0}     
+  \renewcommand{\thetable}{D\arabic{table}} \setcounter{figure}{0} 
+  \renewcommand{\thefigure}{D\arabic{figure}}}  
 bibliography: references.bib
 link-citations: true
 linkcolor: black
@@ -22,7 +26,7 @@ csl: proceedings-of-the-royal-society-b.csl
 processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 0
 
-packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','LSAfun','simr','effsize')
+packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','LSAfun','simr','effsize','readr')
 missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
 if (length(missingpackages)>0){install.packages(missingpackages)}
 toinstall <- packagelist[which(!packagelist %in% (.packages()))]
@@ -424,7 +428,7 @@ fm2$filled <- ifelse(is.na(fm2$response), 0, 1)
 total <- ddply(fm2, .(Participant.Private.ID, Delay, Test.Time), summarise, total=sum(filled))
 
 # total response per group (Mean and SD)
-ddply(total, .(Delay, Test.Time), summarise, average=mean(total), stdev=sd(total))
+totalstats <- ddply(total, .(Delay, Test.Time), summarise, average=mean(total), stdev=sd(total))
 
 # ANOVA
 total_anova <- aov(log10(total) ~ Delay*Test.Time, data = total)
@@ -681,7 +685,6 @@ semmeans <- emmeans(semantic_ANOVA, pairwise ~ Test.Time | Delay)
 
 ```
 
-
 # Author Note {.unnumbered}
 
 We have no conflict of interest to disclose. Correspondence concerning this article should be addressed to Matthew Mak, Department of Psychology, University of York, Heslington, York, YO10 5DD, United Kingdom; Email: [matthew.mak\@york.ac.uk](matthew.mak\@york.ac.uk)
@@ -696,7 +699,7 @@ All the materials, data, and analysis scripts are publicly available on Open Sci
 
 # Abstract {.unnumbered}
 
-Human memory is known to be supported by sleep. However, less is known about the effect of sleep on false memory, where people remember events that never occurred. In the laboratory, false memories are often induced via the Deese-Roediger-McDermott (DRM) paradigm where participants are presented with semantically related words such as nurse, hospital, and sick (studied words). Subsequently, participants are likely to falsely remember that a related lure word such as doctor was presented. Multiple studies have examined whether these false memories are influenced by sleep, with contradictory results. A recent meta-analysis suggests that sleep may increase DRM false memory when short lists are used. We tested this in a registered report (N=488) with a 2 (Interval: Immediate vs. 12-hr Delay) $\times$ 2 (Test Time: 9AM vs. 9PM) between-participant DRM experiment, using short DRM lists (N = 8 words/list) and free recall as the memory test. We found that the Sleep and Wake participants were well-matched on the number of total responses, but those in the Sleep group produced fewer intrusions (i.e., words that were neither studied nor lure words), and when this was statistically controlled for, they showed a greater tendency to recall more critical lures as well as more studied items. Our findings support the view that sleep may facilitate gist abstraction and/or spreading activation, alongside strengthening/protecting newly encoded declarative memories.     
+Human memory is known to be supported by sleep. However, less is known about the effect of sleep on false memory, where people remember events that never occurred. In the laboratory, false memories are often induced via the Deese-Roediger-McDermott (DRM) paradigm where participants are presented with semantically related words such as nurse, hospital, and sick (studied words). Subsequently, participants are likely to falsely remember that a related lure word such as doctor was presented. Multiple studies have examined whether these false memories are influenced by sleep, with contradictory results. A recent meta-analysis suggests that sleep may increase DRM false memory when short lists are used. We tested this in a registered report (N=`r nrow(total)`) with a 2 (Interval: Immediate vs. 12-hr Delay) $\times$ 2 (Test Time: 9AM vs. 9PM) between-participant DRM experiment, using short DRM lists (N = 8 words/list) and free recall as the memory test. We found that the Sleep and Wake participants were well-matched on the number of total responses, but those in the Sleep group produced fewer intrusions (i.e., words that were neither studied nor lure words), and when this was statistically controlled for, they showed a greater tendency to recall more critical lures as well as more studied items. Our findings support the view that sleep may facilitate gist abstraction and/or spreading activation, alongside strengthening/protecting newly encoded declarative memories.     
 
 **Keywords**: Sleep, False Memory, DRM, Recall, Gist Abstraction, Spreading Activation
 
@@ -854,7 +857,8 @@ There was a surprise attention check after the 4th, 9th, 13th, 18th lists, where
 
 ## Free Recall.
 
-Participants had 10 mins to type out all the words they could remember from the study phase in a textbox. When there was 2 min left, a timer appeared. Participants could not proceed before the time was up. 
+Participants had 10 mins to type out all the words they could remember from the study phase in a textbox. When there was 2 min left, a timer appeared. Participants could not proceed before the time was up.
+
 To maximise the likelihood that participants paid full attention instead of doing something else (e.g., playing with their phone) during recall, there was an attention check throughout: On the same page as the response textbox, there was a white square that turned red every 2 to 3 mins. The change in colour lasted for 10 s, during which a single digit was shown. Participants had to enter the digit into a separate textbox to show that they were paying attention. Throughout the 10-min recall task, the square turned red four times, so participants needed to enter four digits as they attempted the recall task.
 
 ## Additional measures to ensure data quality. 
@@ -972,6 +976,8 @@ emout4 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
 
 temp <- capture.output(prem$contrasts[1])
 emout5 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
+temp <- capture.output(prem$contrasts[2])
+emout6 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
 
 luress <- subset(lure_pp, lure_pp$Delay=='12-hour delay')
 meanout1 <- mean(luress$Lure.Recalled[which(luress$Test.Time=='AM')])
@@ -1078,7 +1084,7 @@ Surprisingly, all the Bayes Factors, except for the Interval $\times$ Test Time 
 
 # Results of Exploratory Analyses
 
-In this section, we present the results of four exploratory analyses, which explored [1] the number of total responses (i.e., studied + lure + intrusions) across groups, [2] whether the effect of sleep on lure recall is modulated by veridical recall, as suggested by Diekelmann et al. [@diekelmann2010a], [3] the extent to which a lure being produced is predicted by its corresponding list items being recalled, and [4] the semantic distance between intrusions and critical lures.
+In this section, we present the results of four exploratory analyses, which explored (1) the number of total responses (i.e., studied + lure + intrusions) across groups, (2) whether the effect of sleep on lure recall is modulated by veridical recall, as suggested by Diekelmann et al. [@diekelmann2010a], (3) the extent to which a lure being produced is predicted by its corresponding list items being recalled, and (4) the semantic distance between intrusions and critical lures.
 
 ## Number of total responses
 
@@ -1096,7 +1102,7 @@ Unlike the intrusion data which had an overall mean of `r round(mean(intrusions$
 
 In 36 participants (18 Sleep and 18 Wake), Diekelmann et al. [-@diekelmann2010a] found that the effect of sleep on DRM false recall was modulated by veridical recall. In their analysis, they performed a post-hoc median split on adjusted veridical recall (i.e., correct recall minus intrusions), separating their participants as either high or low performers. They reported that participants in the Sleep (vs. Wake) group falsely recalled more lures, but only if they were low performers. This finding, as far as we can see, has yet to be replicated, so we explored whether it could be observed in our data, which is more well-suited to test for individual differences given our large sample size.
 
-In this exploratory analysis, we followed Diekelmann et al. [-@diekelmann2010a] by focusing on the Delay groups\footnote{Note that Diekelmann et al. (2010) did not have Immediate/Control groups.} and by performing a median split on our sample’s adjusted veridical recall (Median = 5), classifying our participants as either high (>5; N = 117) or low ($\leq$ 5; N = 123) performers. We followed the analysis approach of Diekelmann et al. [-@diekelmann2010a], but since the number of critical lures a participant produced is count data, we used a 2 (Group: Sleep vs. Wake) $\times$ 2 (Adjusted veridical recall: High vs. Low Performers) Poisson regression, instead of an ANOVA. This analysis showed no main effect of Group ($\beta$ = `r round(as.numeric(emout5[7]),digits=3)`, z = `r round(as.numeric(emout5[10]),digits=3)`, p = `r p_format(as.numeric(emout5[11]),digits=3,leading.zero=F)`) but a main effect of Adjusted veridical recall ($\beta$ = -0.438, z = -3.766, p < .001), such that high performers (M = 3.17, SD = 2.71) tended to falsely recall more critical lures than low performers (M = 2.09, SD = 1.68) ([@thapar2001a; @toglia1999a], but see [@cann2011a; @roediger2001a; @stadler1999a]). Furthermore, importantly, the interaction between Group and Adjusted veridical recall was not significant ($\beta$ = 0.049, z = 0.30, p = .763). Despite this, we followed Diekelmann et al. [-@diekelmann2010a] by comparing low performers in the Sleep and Wake groups. Contrary to their findings, emmeans showed that our low performers in both groups recalled essentially the same number of critical lures (M$_{Sleep}$ = `r round(premmeans[2,3],digits=2)`, SD$_{Sleep}$ = `r round(premmeans[2,4],digits=2)` vs. M$_{Wake}$ = `r round(premmeans[4,3],digits=2)`, SD$_{Wake}$ = `r round(premmeans[4,4],digits=2)`; $\beta$ = 0.133, z = 0.021, p = .982). In other words, this exploratory analysis found no evidence that the effect of sleep on false recall was modulated by veridical memory, casting doubt over the robustness and reliability of Diekelmann et al.’s [-@diekelmann2010a] findings.
+In this exploratory analysis, we followed Diekelmann et al. [-@diekelmann2010a] by focusing on the Delay groups\footnote{Note that Diekelmann et al. (2010) did not have Immediate/Control groups.} and by performing a median split on our sample’s adjusted veridical recall (Median = 5), classifying our participants as either high (>5; N = 117) or low ($\leq$ 5; N = 123) performers. We followed the analysis approach of Diekelmann et al. [-@diekelmann2010a], but since the number of critical lures a participant produced is count data, we used a 2 (Group: Sleep vs. Wake) $\times$ 2 (Adjusted veridical recall: High vs. Low Performers) Poisson regression, instead of an ANOVA. This analysis showed no main effect of Group ($\beta$ = `r round(as.numeric(emout5[7]),digits=3)`, z = `r round(as.numeric(emout5[10]),digits=3)`, p = `r p_format(as.numeric(emout5[11]),digits=3,leading.zero=F)`) but a main effect of Adjusted veridical recall ($\beta$ = -0.438, z = -3.766, p < .001), such that high performers (M = `r round(premmeans[1,3],digits=2)`, SD = `r round(premmeans[1,4],digits=2)`) tended to falsely recall more critical lures than low performers (M = `r round(premmeans[2,3],digits=2)`, SD = `r round(premmeans[2,4],digits=2)`) ([@thapar2001a; @toglia1999a], but see [@cann2011a; @roediger2001a; @stadler1999a]). Furthermore, importantly, the interaction between Group and Adjusted veridical recall was not significant ($\beta$ = `r round(prsum$coefficients[4,1],digits=3)`, z = `r round(prsum$coefficients[4,3],digits=3)`, p = `r p_format(prsum$coefficients[4,3],digits=3,leading.zero=F)`). Despite this, we followed Diekelmann et al. [-@diekelmann2010a] by comparing low performers in the Sleep and Wake groups. Contrary to their findings, emmeans showed that our low performers in both groups recalled essentially the same number of critical lures (M$_{Sleep}$ = `r round(premmeans[2,3],digits=2)`, SD$_{Sleep}$ = `r round(premmeans[2,4],digits=2)` vs. M$_{Wake}$ = `r round(premmeans[4,3],digits=2)`, SD$_{Wake}$ = `r round(premmeans[4,4],digits=2)`; $\beta$ = `r round(as.numeric(emout6[7]),digits=3)`, z = `r round(as.numeric(emout6[10]),digits=3)`, p = `r p_format(as.numeric(emout6[11]),digits=3,leading.zero=F)`). In other words, this exploratory analysis found no evidence that the effect of sleep on false recall was modulated by veridical memory, casting doubt over the robustness and reliability of Diekelmann et al.’s [-@diekelmann2010a] findings.
 
 ## The relationship between lure and veridical recall on a list level
 
@@ -1125,7 +1131,6 @@ table6data[9,] <- c('Correct recall/list x Interval x Test Time', round(modout[9
 knitr::kable(table6data, booktabs = T, caption='Outputs from the exploratory generalised mixed-effect model examining the effects of intrusions, correct recall per list, Interval (Immediate vs. Delay), and Test Time (Sleep vs. Wake) in false recall.', align='lllll') %>%
   row_spec(0, bold=T) %>%
   kable_styling(latex_options='HOLD_position')
-
 
 ```
 
@@ -1169,23 +1174,86 @@ In line with the previous exploratory analysis on adjusted veridical recall, we 
 
 ## Semantic distance between intrusions and critical lures
 
-As per the DRM literature, responses that were neither the studied list words nor the critical lures were classified as (non-critical) intrusions. For instance, our participants studied nurse, sick, lawyer, medicine, health, hospital, dentist, and physician, with doctor as the critical lure. Responses such as clinic and coconut would both be considered intrusions, but clearly, clinic is semantically more related to the studied list words than coconut. In other words, there is much diversity within the intrusion data. Here, we explored whether our four groups differed in terms of the semantic distance between intrusions and critical lures, as indexed by pre-trained semantic spaces (ukWaC; [@baroni2009a]) derived from word2vec [@guenther2015a]. We reasoned that since lure recall was greater in our Sleep (vs. Wake) participants, the intrusions produced by these participants could be more related to the lures in semantic space (e.g., @mak2023a). To test this, we computed the cosine similarities between each intrusion and each of the 20 critical lures (see Table \@ref(tab:table7) for an illustration). The intrusion-lure pair with the highest cosine similarity (i.e., the nearest neighbour) was used for this analysis. 
+As per the DRM literature, responses that were neither the studied list words nor the critical lures were classified as (non-critical) intrusions. For instance, our participants studied nurse, sick, lawyer, medicine, health, hospital, dentist, and physician, with doctor as the critical lure. Responses such as clinic and coconut would both be considered intrusions, but clearly, clinic is semantically more related to the studied list words than coconut. In other words, there is much diversity within the intrusion data. Here, we explored whether our four groups differed in terms of the semantic distance between intrusions and critical lures, as indexed by pre-trained semantic spaces (ukWaC; [@baroni2009a]) derived from word2vec [@guenther2015a]. We reasoned that since lure recall was greater in our Sleep (vs. Wake) participants, the intrusions produced by these participants could be more related to the lures in semantic space (e.g., @mak2023a). To test this, we computed the cosine similarities between each intrusion and each of the 20 critical lures (see Table \@ref(tab:table8) for an illustration). The intrusion-lure pair with the highest cosine similarity (i.e., the nearest neighbour) was used for this analysis. 
+
+``` {r table8}
+
+table8data <- data.frame(matrix(0,nrow=6,ncol=4))
+table8data[1,]  <- c('Participant ID','Intrusion produced','Lure','cosine')
+table8data[2,]  <- c('','by a participant','','')
+table8data[3,] <- c('1','ear','smell','0.405')
+table8data[4,] <- c('1','ear','sleep','0.302')
+table8data[5,] <- c('1','ear','doctor','0.239')
+table8data[6,] <- c('1','ear','window','0.129')
+
+knitr::kable(table8data, booktabs = T, col.names=NULL, caption='Procedure for the exploratory analysis on semantic distance between intrusion and lure.', align='llll') %>%
+  row_spec(1:2, bold=T) %>%
+  row_spec(2, hline_after=T) %>%
+  kable_styling(latex_options='HOLD_position')
+
+
+table8bdata <- data.frame(matrix(0,nrow=8,ncol=6))
+table8bdata[1,] <- c('Participant ID','Intrusion produced','Closest lure','cosine','Number of intrusion','Average cosine/')
+table8bdata[2,] <- c('','by a participant','','','produced','participant')
+table8bdata[3,] <- c('1','ear','smell','0.405','','')
+table8bdata[4,] <- c('1','metro','city','0.351','4','0.347')
+table8bdata[5,] <- c('1','heavy','slow','0.413','','')
+table8bdata[6,] <- c('1','clear','slow','0.219','','')
+table8bdata[7,] <- c('2','clinic','doctor','0.494','','')
+table8bdata[8,] <- c('2','beach','mountain','0.484','2','0.489')
+
+knitr::kable(table8bdata, booktabs = T, col.names=NULL, align='llllcc') %>%
+  row_spec(1:2, bold=T) %>%
+  row_spec(c(2,6), hline_after=T) %>%
+  kable_styling(latex_options='HOLD_position',font_size=8)
+
+```
+
 
 ``` {r extractsemdist}
 
 aovresults <- unlist(summary(semantic_ANOVA))
 temp <- capture.output(semmeans$contrasts[2])
-emout6 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
+emout7 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
 
 sdmeans <- ddply(average_closest, .(Delay, Test.Time), summarise, average=mean(meanDistance, na.rm=T), stdev=sd(meanDistance, na.rm = T))
 
 ```
 
-Since the number of intrusions produced varies greatly between participants, we averaged the lure-intrusion cosine on a participant level and used this as the dependent variable. A 2 (Interval) $\times$ 2 (Test Time) between-participant ANOVA revealed no effects of Interval (z = `r round(aovresults[13],digits=3)`, p = `r p_format(aovresults[17],digits=3,accuracy=0.001,leading.zero=F)`) or Test Time (z = `r round(aovresults[14],digits=3)`, p = `r p_format(aovresults[18],digits=3,accuracy=0.001,leading.zero=F)`), and their interaction was also non-significant (z = `r round(aovresults[15],digits=3)`, p = `r p_format(aovresults[19],digits=3,accuracy=0.001,leading.zero=F)`). We explored further by comparing the cosine in the Sleep and Wake groups. While this comparison is in the predicted direction (M$_{Sleep}$ = `r round(sdmeans[3,3],digits=3)`, SD$_{Sleep}$ = `r round(sdmeans[3,4],digits=3)` vs. M$_{Wake}$ = `r round(sdmeans[4,3],digits=3)`, SD$_{Wake}$ = `r round(sdmeans[4,4],digits=3)`), it was not statistically significant according to an emmeans pairwise comparison (z = `r emout6[9]`, p = `r p_format(as.numeric(emout6[10]),digits=3,accuracy=0.001,leading.zero=F)`). We interpret these null findings as suggesting that the effect of sleep in the DRM paradigm may be fairly restricted to the lures/studied list words. 
+Since the number of intrusions produced varies greatly between participants, we averaged the lure-intrusion cosine on a participant level and used this as the dependent variable. A 2 (Interval) $\times$ 2 (Test Time) between-participant ANOVA revealed no effects of Interval (z = `r round(aovresults[13],digits=3)`, p = `r p_format(aovresults[17],digits=3,accuracy=0.001,leading.zero=F)`) or Test Time (z = `r round(aovresults[14],digits=3)`, p = `r p_format(aovresults[18],digits=3,accuracy=0.001,leading.zero=F)`), and their interaction was also non-significant (z = `r round(aovresults[15],digits=3)`, p = `r p_format(aovresults[19],digits=3,accuracy=0.001,leading.zero=F)`). We explored further by comparing the cosine in the Sleep and Wake groups. While this comparison is in the predicted direction (M$_{Sleep}$ = `r round(sdmeans[3,3],digits=3)`, SD$_{Sleep}$ = `r round(sdmeans[3,4],digits=3)` vs. M$_{Wake}$ = `r round(sdmeans[4,3],digits=3)`, SD$_{Wake}$ = `r round(sdmeans[4,4],digits=3)`), it was not statistically significant according to an emmeans pairwise comparison (z = `r emout7[9]`, p = `r p_format(as.numeric(emout7[10]),digits=3,accuracy=0.001,leading.zero=F)`). We interpret these null findings as suggesting that the effect of sleep in the DRM paradigm may be fairly restricted to the lures/studied list words. 
 
 ## Results summary
 
-In light of the extensive dataset and the comprehensive analyses conducted, we decided to summarise our key findings in Table 8 to help readers gain a better understanding of the overall picture.
+In light of the extensive dataset and the comprehensive analyses conducted, we decided to summarise our key findings in Table \@ref(tab:table9) to help readers gain a better understanding of the overall picture.
+
+``` {r table9}
+
+table9data <- data.frame(matrix(0,nrow=11,ncol=6))
+
+table9data[1,] <- c('Categories','Interval x','Mean in the','Mean in the','Pairwise','Interpretation')
+table9data[2,] <- c('','Test Time','Sleep group','Wake group','comparison','')
+table9data[3,] <- c('','p<.05?*','(SD)','(SD)','p<.05?','')
+
+table9data[4,] <- c('Intrusions','Yes',paste0(round(intrusion_CI[3,4], digits = 2),' (',round(intrusion_CI[3,5], digits = 2),')'),paste0(round(intrusion_CI[4,4], digits = 2),' (',round(intrusion_CI[4,5], digits = 2),')'),'Yes','Few intrusions')
+table9data[5,] <- c('','','','','','after sleep')
+
+table9data[6,] <- c('Critical lures','Yes (N of intrusions',paste0(round(meanout1, digits = 2),' (',round(sdout1, digits = 2),')'),paste0(round(meanout2, digits = 2),' (',round(sdout2, digits = 2),')'),'Yes','Greater DRM false')
+table9data[7,] <- c('(Max=20)','included as a coviariate)','','','','recall after sleep')
+
+table9data[8,] <- c('Studied list words','Yes (N of intrusions',paste0(round(studied_CI[3,4], digits = 2),' (',round(studied_CI[3,5], digits = 2),')'),paste0(round(studied_CI[4,4], digits = 2),' (',round(studied_CI[4,5], digits = 2),')'),'Yes','Greater veridical recall')
+table9data[9,] <- c('(Max=160)','included as a coviariate)','','','','after sleep')
+
+table9data[10,] <- c('Total responses','No',paste0(round(totalstats[3,3], digits = 2),' (',round(totalstats[3,4], digits = 2),')'),paste0(round(totalstats[4,3], digits = 2),' (',round(totalstats[4,4], digits = 2),')'),'No','Sleep and Wake groups')
+table9data[11,] <- c('','','','','','were well-matched')
+
+knitr::kable(table9data, booktabs = T, col.names=NULL, caption='Summary of the key findings.', align='llllll') %>%
+  row_spec(1:3, bold=T) %>%
+  row_spec(c(3,5,7,9), hline_after=T) %>%
+  kable_styling(latex_options='HOLD_position',font_size=8) %>%
+  add_footnote('* A significant Interval x Test Time interaction suggests that any difference between the Sleep and Wake groups cannot',notation='none') %>%
+  add_footnote('be solely explained by study/test being completed at different time of day.',notation='none')
+
+```
 
 # Time-of-day effects on intrusions
 
@@ -1197,21 +1265,113 @@ Finally, having considered the potential reason why evening testing may increase
 
 # Some reflections 
 
-**Mixed evidence in the existing literature**.	Our well-powered registered report had a total sample size of 488, with 120 in each of the Sleep and Wake groups. This far surpasses the sample sizes of prior ‘Sleep $\times$ DRM’ studies, where the median N was 27.6 per group. In our data, the effect of sleep on lure recall was only significant when controlling for differences in intrusion rates, and we checked the size of this sleep effect in an exploratory analysis, putting the estimate at Cohen’s d = 0.274.\footnote{We used the eff\_size function in the emmeans package to estimate the effect size of Test Time (sleep vs. wake) in our confirmatory GLM model, with sigma = sigma(lure\_model) and edf = infinite.} This estimate is substantially lower than that from Newbury and Monaghan’s [-@newbury2019a] meta-analysis, which reported to be Cohen’s d = +0.92 (95% CI: 0.54, 1.30). The larger sample size and well-powered nature of our registered report contribute to a more precise estimation of the effect size, highlighting the need for cautious interpretation of prior evidence and the possibility that prior effect sizes may have been inflated due to, for example, publication bias and small sample sizes. Furthermore, given sleep had such a small effect on DRM false memory, it is perhaps not surprising that previous studies had produced mixed evidence. In light of these, we echo the view of a recent article [@cordi2021a] that future sleep research must prioritise robust methodologies (e.g., registered report and pre-registration) and larger sample sizes to enhance the reliability and generalisability of sleep-related memory effects [see also @nemeth2019a].
+**Mixed evidence in the existing literature**.	Our well-powered registered report had a total sample size of `r nrow(total)`, with 120 in each of the Sleep and Wake groups. This far surpasses the sample sizes of prior ‘Sleep $\times$ DRM’ studies, where the median N was 27.6 per group. In our data, the effect of sleep on lure recall was only significant when controlling for differences in intrusion rates, and we checked the size of this sleep effect in an exploratory analysis, putting the estimate at Cohen’s d = 0.274.\footnote{We used the eff\_size function in the emmeans package to estimate the effect size of Test Time (sleep vs. wake) in our confirmatory GLM model, with sigma = sigma(lure\_model) and edf = infinite.} This estimate is substantially lower than that from Newbury and Monaghan’s [-@newbury2019a] meta-analysis, which reported to be Cohen’s d = +0.92 (95% CI: 0.54, 1.30). The larger sample size and well-powered nature of our registered report contribute to a more precise estimation of the effect size, highlighting the need for cautious interpretation of prior evidence and the possibility that prior effect sizes may have been inflated due to, for example, publication bias and small sample sizes. Furthermore, given sleep had such a small effect on DRM false memory, it is perhaps not surprising that previous studies had produced mixed evidence. In light of these, we echo the view of a recent article [@cordi2021a] that future sleep research must prioritise robust methodologies (e.g., registered report and pre-registration) and larger sample sizes to enhance the reliability and generalisability of sleep-related memory effects [see also @nemeth2019a].
 
 # References {.unnumbered}
 
 <div id="refs"></div>
 
+
 # Appendix A: Screening Survey {.unnumbered}
 
+``` {r sstable}
+
+sstabledata <- data.frame(matrix(0,nrow=29,ncol=1))
+
+sstabledata[1,1] <- 'Page 1: Demographic information'
+
+sstabledata[2,1] <- '1)	What is your gender identity?'
+sstabledata[3,1] <- '2)	How old are you?'
+sstabledata[4,1] <- '3)	In what country do you currently live?'
+sstabledata[5,1] <- '4)	What is your first language(s)? '
+sstabledata[6,1] <- '5)	What is your ethnicity?'
+sstabledata[7,1] <- '6)	What is the highest level of education you have completed?'
+sstabledata[8,1] <- '7)	Do you have any history of any psychiatric (e.g., schizophrenia), developmental'
+sstabledata[9,1] <- '(e.g., autism, dyslexia), or sleep disorders (e.g., insomnia)? '
+sstabledata[10,1] <- '8)	If your answer to the above is Yes, please can you name the diagnosis/es?'
+
+sstabledata[11,1] <- 'Page 2: Outline of the main study'
+
+sstabledata[12,1] <- 'IMPORTANT: Please read carefully'
+sstabledata[13,1] <- 'We are recruiting hundreds of participants for a simple memory study. We would'
+sstabledata[14,1] <- 'like to see if you may be interested in taking part.'
+sstabledata[15,1] <- 'In Task 1, participants will see and remember some English words. This will take about 10 mins.'
+sstabledata[16,1] <- 'In Task 2, participants will complete a simple memory test based on the words they saw in Task 1.'
+sstabledata[17,1] <- 'This requires about 12 mins.'
+sstabledata[18,1] <- 'Participants will receive £3.5 (£9.5/hour) upon completion of the two tasks. '
+sstabledata[19,1] <- 'Importantly, participants will be randomly allocated to one of the four groups:'
+sstabledata[20,1] <- 'Group A (AM Group): You can start Task 1 and 2 any time between 8.30-10.30AM.'
+sstabledata[21,1] <- 'Group B (PM Group): You can start Task 1 and 2 any time between 8.30-10.30PM.'
+sstabledata[22,1] <- 'Group C (Delay Group 1): You can start Task 1 any time between 8.30-10.30AM and then Task 2'
+sstabledata[23,1] <- 'between 8.30-10.30PM on the same day. '
+sstabledata[24,1] <- 'Group D (Delay Group 2): You can start Session 1 any time between 8.30-10.30PM and then Task 2'
+sstabledata[25,1] <- 'between 8.30-10.30AM the day after.'
+sstabledata[26,1] <- 'Those in Groups C and D will receive a £0.2 bonus upon completion of the study. Unfortunately,'
+sstabledata[27,1] <- 'we are NOT able to accommodate any preferences for group allocation.'
+sstabledata[28,1] <- 'If you are happy to take part in our memory study, press Yes below. If not, press No.'
+sstabledata[29,1] <- 'Yes / No'
+
+knitr::kable(sstabledata, booktabs = T, col.names=NULL, align='l') %>%
+  row_spec(c(1,11), align='c') %>%
+  row_spec(c(1,10,11), hline_after=T) %>%
+  row_spec(12, bold=T) %>%
+  kable_styling(latex_options='HOLD_position')
+
+```
+
 # Appendix B: Survey in the test phase {.unnumbered}
+
+1.	(Sleep group only) Approximately what time did you go to bed last night?
+
+2.	(Sleep group only) Approximately what time did you wake up this morning?
+
+3.	(Sleep group only) How would you rate the quality of last night's sleep?
+**Very Good, Good, Fair, Poor, Very Poor**
+
+4.	(Wake group only) Did you have a nap between Session 1 and now?
+**Yes, No**
+
+5.	(Wake group only) If your answer to the above is Yes, how long was the nap?
+
+6.	Did you consume any alcoholic drinks in the last 12 hours? If Yes, how much?
+Yes, No
+
+7.	Did you consume any caffeinated drink in the last 6 hours? If Yes, how much?
+Yes, No
+
+8.	How many people are in close proximity (< 3 meter) to you RIGHT NOW? 
+
+9.	How bright is your immediate environment RIGHT NOW?
+**Too bright, Sufficiently bright, A bit dark, Very dark**
+
+10.	How noisy is the environment you are in RIGHT NOW? 
+**Very quiet, Quiet, Noisy, Very noisy.**
+
+**The following questions were taken from the reduced version of the Morningness/Evenningess questionnaire (Adan & Almirrall, 1991).**
+
+11.	Approximately what time would you get up if you were entirely free to plan your day?
+**5am-6:30am, 6:30am-7:45am, 7:45am-9:45am, 9:45am-11am, 11am-12 noon**
+
+12.	On a regular day, during the first half hour after you wake up in the morning, how do you feel?
+**Very tired, Fairly tired, Fairly refreshed, Very refreshed**
+
+13.	On a regular day, at approximately what time in the evening do you feel tired, and, as a result, in need of sleep?
+**8-9pm, 9-10:15pm, 10:15pm-12:45am, 12:45-2am, 2-3am**
+
+14.	On a regular day, at approximately what time of day do you usually feel your best?
+**5-8am, 8-10am, 10am-5pm, 5-10pm, 10pm-5am**
+
+15.	One hears about "morning types" and "evening types." Which one of these types do you consider yourself to be?
+**Definitely an evening type, Rather more an evening type than a morning type, Rather more a morning type than an evening type, Definitely a morning type**
+
 
 # Appendix C: Justifications for using GLMM for false recall (as opposed to t-test/ANOVA) {.unnumbered}
 
 The number of critical lures falsely recalled by a participant is count data, ranging from 0 to anything from 8 to 20 (depending on how many DRM lists were shown). In Payne et al. [-@payne2009a] for instance, the mean number of lure recalls was ~3.25 (out of 8). Count data with a low mean almost never approximates a normal distribution, because it is truncated at 0 (i.e., negative scores are impossible) and is skewed to the right [@herbison-a]. Parametric tests like t-test and ANOVA assume a normal distribution, so they are unlikely to be suitable for false recall data. GLMM, on the other hand, does not assume normal distribution [@lo2015a]. In addition, GLMM has numerous advantages over a t-test or an ANOVA; for instance, it can take by-participant and by-item variance into account, giving researchers the ability to test whether the effect of an independent variable generalises across participants and items [e.g., @brysbaert2018a]. 
 
 # Appendix D: Power analysis {.unnumbered}
+
+\beginsupplement
 
 ```{r powersetup, echo=FALSE, include=FALSE}
 
@@ -1267,7 +1427,7 @@ fabricated_model <- buildmer(correct~Interval*Test_Time+(1|participant)+(Interva
 fabricated_model <- glmer(correct~Interval*Test_Time+(1|participant), data=fabricated, family="binomial", control=glmerControl(optimizer="bobyqa"))
 
 #fixed-effect estimates in Table 3
-summary(fabricated_model)
+fmout <- summary(fabricated_model)
 
 if (processdata==1){
 
@@ -1293,19 +1453,43 @@ save(file='data/processeddata.RData',list=c('intrusion_poisson','intrusionout','
 
 }
 
+temp <- capture.output(psout)
+pstext <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
+
+temp <- capture.output(psout2)
+pstext2 <- unlist(strsplit(gsub("([*]+$)|[<]", "", temp[2]), "\\s+"))
+
+
 ```
 
 According to Newbury and Monaghan’s [-@newbury2019a] meta-analysis, the effect size for sleep in DRM false memory is Hedge’s g = +0.92 (95% CI: 0.54, 1.30; p < .001) in short lists (10 words per list).\footnote{Hedge’s g and Cohen’s d are interchangeable when the sample size is larger than 30 (Kline, 2004; Lakens, 2013).} However, due to certain biases in the psychology literature (e.g., publication bias), it has been argued that published effect sizes are generally inflated [e.g., @schaefer2019a] and that power analysis should be based on the lowest meaningful estimate [@albers2018a; @cortex2013a]. Therefore, we opted for a more conservative (yet contextualised) effect size estimate and went for the lower-bound of the 95% confidence interval reported by Newbury and Monaghan [-@newbury2019a], which is g = +0.54.
 
 On estimating power in GLMM, a recent guideline [@kumle2021a] recommends using well-powered data from previous experiments. However, as far as we are aware, no prior ‘Sleep $\times$ DRM’ studies have made their data publicly available. We, therefore, simulated a dataset for our power calculation (available on OSF).
 
-The first step is to determine a sample size. We have the financial resources to reach up to 160 participants/group (i.e., 640 in total), so we began by fabricating a dataset containing 120 participants/group. We made up 20 false recall observations for each participant. We then split the dataset by Interval, so one dataset for the Delay (Sleep + Wake) groups, another for the Immediate (AM + PM-control) groups, with each containing 4800 observations from 240 participants. In the first dataset, we simulated the false recall data for the Delay groups such that they approximated the data distribution [M$_{Sleep}$ = 45.9% (SD = 20.6%) vs M$_{Wake}$ = 36.3% (SD = 21.2%), p = .005] from a prior study (Payne et al., [-@payne2009a]; Experiment 1). Then, the data were manipulated to fit with our effect size assumption, such that the effect size for sleep is d = +`r round(powerd1$estimate,digits=2)` [M$_{Sleep}$ = 44.7% (SD = 12.6%) vs. M$_{Wake}$ = 38.0% (SD = 12.0%); t(`r round(powert1$parameter,digits=1)`) = `r round(powert1$statistic,digits=2)`, p = `r p_format(powert1$p.value,leading.zero=F,digits=3,accuracy=0.001)`]. Afterwards, we simulated the false recall data in the second dataset for the AM and PM-control groups such that they also approximated the data distribution in Payne et al. [-@payne2009a] (Experiment 1; MAM = 42.5% (SD = 19.6%) vs. MPM = 46.3% (SD = 23.5%), p = .57) and that they did not differ significantly from each other [MAM = 42.9% (SD = 13.0%) vs. MPM= 43.5% (SD = 14%); t(`r round(powert2$parameter,digits=1)`) = `r round(powert2$statistic,digits=2)`, p = .709, d = `r round(powerd2$estimate,digits=2)`].\footnote{Notably, the standard deviations (SDs) from Payne et al. (2009; Experiment 1) are larger than those in our fabricated datasets. This is because Payne et al. showed only 8 wordlists (i.e., maximum lure recall = 8) while ours will show 20 (i.e., maximum lure recall = 20). To explain why this matters, a more concrete example here is useful: In Payne et al, a participant falsely recalling 3 lures would have a false recall rate of 37.5\% while another recalling 4 lures would have a rate of 50\%. So there is a 12.5\% difference between each successive number. In our fabricated data, recalling 3 lures has a false recall rate of 15\% while 4 lures has a rate of 20\%, so there is a 5\% difference. Therefore, understandably, the SDs in our fabricated datasets are necessarily lower than theirs (by roughly a half).} 
+The first step is to determine a sample size. We have the financial resources to reach up to 160 participants/group (i.e., 640 in total), so we began by fabricating a dataset containing 120 participants/group. We made up 20 false recall observations for each participant. We then split the dataset by Interval, so one dataset for the Delay (Sleep + Wake) groups, another for the Immediate (AM + PM-control) groups, with each containing 4800 observations from 240 participants. In the first dataset, we simulated the false recall data for the Delay groups such that they approximated the data distribution [M$_{Sleep}$ = 45.9% (SD = 20.6%) vs M$_{Wake}$ = 36.3% (SD = 21.2%), p = .005] from a prior study (Payne et al., [-@payne2009a]; Experiment 1). Then, the data were manipulated to fit with our effect size assumption, such that the effect size for sleep is d = +`r round(powerd1$estimate,digits=2)` [M$_{Sleep}$ = 44.7% (SD = 12.6%) vs. M$_{Wake}$ = 38.0% (SD = 12.0%); t(`r round(powert1$parameter,digits=1)`) = `r round(powert1$statistic,digits=2)`, p = `r p_format(powert1$p.value,leading.zero=F,digits=3,accuracy=0.001)`]. Afterwards, we simulated the false recall data in the second dataset for the AM and PM-control groups such that they also approximated the data distribution in Payne et al. [-@payne2009a] (Experiment 1; MAM = 42.5% (SD = 19.6%) vs. MPM = 46.3% (SD = 23.5%), p = .57) and that they did not differ significantly from each other [MAM = 42.9% (SD = 13.0%) vs. MPM= 43.5% (SD = 14%); t(`r round(powert2$parameter,digits=1)`) = `r round(powert2$statistic,digits=2)`, p = `r p_format(powert2$p.value,leading.zero=F,digits=3,accuracy=0.001)`, d = `r round(powerd2$estimate,digits=2)`].\footnote{Notably, the standard deviations (SDs) from Payne et al. (2009; Experiment 1) are larger than those in our fabricated datasets. This is because Payne et al. showed only 8 wordlists (i.e., maximum lure recall = 8) while ours will show 20 (i.e., maximum lure recall = 20). To explain why this matters, a more concrete example here is useful: In Payne et al, a participant falsely recalling 3 lures would have a false recall rate of 37.5\% while another recalling 4 lures would have a rate of 50\%. So there is a 12.5\% difference between each successive number. In our fabricated data, recalling 3 lures has a false recall rate of 15\% while 4 lures has a rate of 20\%, so there is a 5\% difference. Therefore, understandably, the SDs in our fabricated datasets are necessarily lower than theirs (by roughly a half).} 
 
-We then merged the two fabricated datasets together and fitted a GLMM to it, using the lme4 package [@bates2015a]. The dependent variable, fixed effects structure, coding scheme, and computation procedures were identical to those described in section 12.3. Table D1 shows the fixed-effects estimates from the converged model, which has a by-participant intercept only.
+We then merged the two fabricated datasets together and fitted a GLMM to it, using the lme4 package [@bates2015a]. The dependent variable, fixed effects structure, coding scheme, and computation procedures were identical to those described in section 12.3. Table \@ref(tab:tableD1) shows the fixed-effects estimates from the converged model, which has a by-participant intercept only.
 
-Table D1
+``` {r tableD1}
 
-Based on the fixed-effects estimates, we estimated the power a sample size of 480 (i.e., 120/group) has for detecting an Interval and Test Time interaction. We conducted Monte Carlo simulation using the “simr” package [@green2016a] in R (see Box 2 for R codes). After 500 simulations, it was estimated that a sample of this size gives `r round(100*psout$x/psout$n,digits=1)`% power (95% CI: 87.03, 92.49) to detect a significant interaction. Then, we estimated the power we have for detecting a simple effect of Test Time within the Delay groups (i.e., Sleep vs. Wake). Following the simulation procedures above, it was estimated that 120 participants/group (i.e., 240 in the Delay groups) will give about `r round(100*psout$x/psout$n,digits=1)`% power (95% CI: 97.41, 99.56). In sum, our power calculation showed that having 120 participants/groups will give ample power (>90%) to detect both an Interval x Test Time interaction and a simple effect of Sleep vs. Wake. Finally, we also estimated that we will have at least 80% power as long as we have >99 participants/group. Therefore, in case we fail to reach our target sample size of 120 participants/group before funding expires but manage to recruit >99/group, our proposed experiment will still have satisfactory power.
+modout <- summary(fabricated_model)$coefficients
+
+tableD1data <- data.frame(matrix(0,nrow=4,ncol=5))
+colnames(tableD1data) <- c('Fixed effects','Estimate','SE','z','p')
+
+tableD1data[1,] <- c('Intercept', round(modout[1,1:3],digits=3),p_format(modout[1,4],digits=3,accuracy=0.001,leading.zero=FALSE))
+tableD1data[2,] <- c('Interval', round(modout[2,1:3],digits=3),p_format(modout[2,4],digits=3,accuracy=0.001,leading.zero=FALSE))
+tableD1data[3,] <- c('Test Time', round(modout[3,1:3],digits=3),p_format(modout[3,4],digits=1,accuracy=0.001,leading.zero=FALSE))
+tableD1data[4,] <- c('Interval x Test Time', round(modout[4,1:3],digits=3),p_format(modout[4,4],digits=1,accuracy=0.001,leading.zero=FALSE))
+
+
+knitr::kable(tableD1data, booktabs = T, caption='Fixed-effects estimates from the converged maximal model examining the effects of Interval and Test Time in the fabricated dataset.', align='lllll') %>%
+  row_spec(0, bold=T) %>%
+  kable_styling(latex_options='HOLD_position')
+
+```
+
+Based on the fixed-effects estimates, we estimated the power a sample size of 480 (i.e., 120/group) has for detecting an Interval and Test Time interaction. We conducted Monte Carlo simulation using the “simr” package [@green2016a] in R (see Box 2 for R codes). After 500 simulations, it was estimated that a sample of this size gives `r round(100*psout$x/psout$n,digits=1)`% power (95% CI: `r parse_number(pstext[3])`, `r parse_number(pstext[4])`) to detect a significant interaction. Then, we estimated the power we have for detecting a simple effect of Test Time within the Delay groups (i.e., Sleep vs. Wake). Following the simulation procedures above, it was estimated that 120 participants/group (i.e., 240 in the Delay groups) will give about `r round(100*psout2$x/psout2$n,digits=1)`% power (95% CI: `r parse_number(pstext2[3])`, `r parse_number(pstext2[4])`). In sum, our power calculation showed that having 120 participants/groups will give ample power (>90%) to detect both an Interval x Test Time interaction and a simple effect of Sleep vs. Wake. Finally, we also estimated that we will have at least 80% power as long as we have >99 participants/group. Therefore, in case we fail to reach our target sample size of 120 participants/group before funding expires but manage to recruit >99/group, our proposed experiment will still have satisfactory power.
 
 We note that the focus of our proposed experiment is Research Question #1 [Does sleep (vs. wakefulness) influence DRM false recall?], so we based our power analysis on this question. Despite this, the estimate of 120 participants/group will also give over 90% power to detect the desired effects for Research Question #2 [Does sleep (vs. wake) increase veridical recall?], assuming the effect size for sleep is similar between Questions #1 and #2. Furthermore, since there are more studied list words than critical lures (160 vs. 20), the GLMM for addressing Question #2 will have substantially more observations than that for Question #1 (~76800 vs. ~9600), boosting power on the item level. In short, our target sample size of 120 participants/group will give us sufficient power for both Research Questions.
 
