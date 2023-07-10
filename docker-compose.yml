@@ -4,8 +4,8 @@ services:
     build:
       dockerfile: docker/Dockerfile
       context: .
-    container_name: bakerdh/sleepDRM:knit
-    image: bakerdh/sleepDRM:knit
+    container_name: bakerdh/sleepdrm:knit
+    image: bakerdh/sleepdrm:knit
     volumes:
       - .:/home/rstudio
     environment:
