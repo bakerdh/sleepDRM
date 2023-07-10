@@ -34,6 +34,10 @@ invisible(lapply(toinstall,library,character.only=TRUE))
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
+```
+
+``` {r getdata}
+
 if (!dir.exists('data')){dir.create('data')}
 if (!dir.exists('Figures')){dir.create('Figures')}
 
