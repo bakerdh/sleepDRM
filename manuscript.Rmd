@@ -23,7 +23,7 @@ csl: proceedings-of-the-royal-society-b.csl
 
 ```{r setup, include=FALSE}
 
-processdata <- 1   # running all analyses from scratch takes about 6 hours
+processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 1
 
 packagelist <- c('bookdown','knitr','rmarkdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','simr','effsize','readr','LSAfun')
