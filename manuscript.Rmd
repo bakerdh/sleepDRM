@@ -26,7 +26,7 @@ csl: proceedings-of-the-royal-society-b.csl
 processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 0
 
-packagelist <- c('bookdown','knitr','rmarkdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra')
+packagelist <- c('bookdown','knitr','rmarkdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','simr','effsize','readr')
 missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
 if (length(missingpackages)>0){install.packages(missingpackages)}
 toinstall <- packagelist[which(!packagelist %in% (.packages()))]
@@ -36,33 +36,10 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 ```
 
-``` {r activate1}
-
-library(rstatix)
-
-```
-
 ``` {r activate2}
 
+install.packages("LSAfun")
 library(LSAfun)
-
-```
-
-``` {r activate3}
-
-library(simr)
-
-```
-
-``` {r activate4}
-
-library(effsize)
-
-```
-
-``` {r activate5}
-
-library(readr)
 
 ```
 

@@ -26,7 +26,6 @@ effectsize \
 ggdist \
 car \
 gridExtra \
-LSAfun \
 simr \
 effsize \
 readr
