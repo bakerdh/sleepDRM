@@ -39,6 +39,7 @@ invisible(lapply(toinstall,library,character.only=TRUE))
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
+library(LSAfun, include.only='Cosine')
 
 ```
 
@@ -610,7 +611,7 @@ invisible(dev.off())
 ```
 
 ```{r semanticdistance}
-processdata <- 1
+
 if (processdata==1){
 
 osfproject <- osf_retrieve_node("9pdyf")
@@ -630,45 +631,45 @@ intrusion_item <- intrusion_only$response
 
 my_list <- vector()
 for (i in 1:length(intrusion_item)){
-  new_element <- LSAfun::Cosine(lure_item[1], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[1], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[2], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[2], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[3], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[3], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[4], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[4], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[5], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[5], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[6], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[6], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[7], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[7], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[8], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[8], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[9], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[9], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[10], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[10], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[11], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[11], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[12], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[12], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[13], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[13], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[14], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[14], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[15], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[15], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[16], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[16], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[17], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[17], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[18], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[18], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[19], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[19], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- LSAfun::Cosine(lure_item[20], intrusion_item[i], ukwac)
+  new_element <- Cosine(lure_item[20], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
   }
 
@@ -686,7 +687,7 @@ semantic_ANOVA <- aov(meanDistance~Delay*Test.Time, data=average_closest)
 semmeans <- emmeans(semantic_ANOVA, pairwise ~ Test.Time | Delay)
 
 }
-processdata <- 0
+
 
 ```
 
