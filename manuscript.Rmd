@@ -26,11 +26,11 @@ csl: proceedings-of-the-royal-society-b.csl
 processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 0
 
-# packagelist <- c('bookdown','knitr','rmarkdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','LSAfun','simr','effsize','readr')
-# missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
-# if (length(missingpackages)>0){install.packages(missingpackages)}
-# toinstall <- packagelist[which(!packagelist %in% (.packages()))]
-# invisible(lapply(toinstall,library,character.only=TRUE))
+packagelist <- c('bookdown','knitr','rmarkdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra')
+missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
+if (length(missingpackages)>0){install.packages(missingpackages)}
+toinstall <- packagelist[which(!packagelist %in% (.packages()))]
+invisible(lapply(toinstall,library,character.only=TRUE))
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
@@ -38,50 +38,30 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 ``` {r activate1}
 
-library(bookdown)
-library(knitr)
-library(rmarkdown)
-library(osfr)
-library(plyr)
+library(rstatix)
 
 ```
 
 ``` {r activate2}
 
-library(tidyr)
-library(dplyr)
-library(emmeans)
-library(ggplot2)
-library(Rmisc)
+library(LSAfun)
 
 ```
 
 ``` {r activate3}
 
-library(buildmer)
-library(lme4)
-library(lmerTest)
-library(stringr)
-library(effects)
+library(simr)
 
 ```
 
 ``` {r activate4}
 
-library(effectsize)
-library(ggdist)
-library(car)
-library(gridExtra)
-library(kableExtra)
+library(effsize)
 
 ```
 
 ``` {r activate5}
 
-library(rstatix)
-library(LSAfun)
-library(simr)
-library(effsize)
 library(readr)
 
 ```
