@@ -610,7 +610,7 @@ invisible(dev.off())
 ```
 
 ```{r semanticdistance}
-
+processdata <- 1
 if (processdata==1){
 
 osfproject <- osf_retrieve_node("9pdyf")
@@ -686,7 +686,7 @@ semantic_ANOVA <- aov(meanDistance~Delay*Test.Time, data=average_closest)
 semmeans <- emmeans(semantic_ANOVA, pairwise ~ Test.Time | Delay)
 
 }
-
+processdata <- 0
 
 ```
 
