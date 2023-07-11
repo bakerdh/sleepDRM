@@ -28,4 +28,5 @@ car \
 gridExtra \
 simr \
 effsize \
+LSAfun \
 readr

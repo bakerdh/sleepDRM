@@ -26,6 +26,11 @@ csl: proceedings-of-the-royal-society-b.csl
 processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 0
 
+# currently activating the LSA package seems to crash the script on github
+# now trying a direct call to the Cosine function with the package unactivated
+
+# install.packages("LSAfun")
+
 packagelist <- c('bookdown','knitr','rmarkdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','simr','effsize','readr')
 missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
 if (length(missingpackages)>0){install.packages(missingpackages)}
@@ -34,15 +39,9 @@ invisible(lapply(toinstall,library,character.only=TRUE))
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
-```
-
-``` {r activate2}
-
-# currently activating this package seems to crash the script
-install.packages("LSAfun")
-# library(LSAfun)
 
 ```
+
 
 ``` {r getdata}
 
@@ -631,45 +630,45 @@ intrusion_item <- intrusion_only$response
 
 my_list <- vector()
 for (i in 1:length(intrusion_item)){
-  new_element <- Cosine(lure_item[1], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[1], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[2], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[2], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[3], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[3], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[4], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[4], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[5], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[5], intrusion_item[i], ukwac)
   my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[6], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[6], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[7], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[7], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[8], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[8], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[9], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[9], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[10], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[10], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[11], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[11], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[12], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[12], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[13], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[13], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[14], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[14], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[15], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[15], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[16], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[16], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[17], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[17], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[18], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[18], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[19], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[19], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
-  new_element <- Cosine(lure_item[20], intrusion_item[i], ukwac)
+  new_element <- LSAfun::Cosine(lure_item[20], intrusion_item[i], ukwac)
    my_list[[length(my_list) + 1]] <- new_element
   }
 
