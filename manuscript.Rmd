@@ -27,8 +27,8 @@ processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 0
 
 packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','LSAfun','simr','effsize','readr')
-missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
-if (length(missingpackages)>0){install.packages(missingpackages)}
+# missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
+# if (length(missingpackages)>0){install.packages(missingpackages)}
 toinstall <- packagelist[which(!packagelist %in% (.packages()))]
 invisible(lapply(toinstall,library,character.only=TRUE))
 
