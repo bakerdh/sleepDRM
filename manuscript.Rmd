@@ -36,9 +36,11 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 if (!dir.exists('data')){dir.create('data')}
 if (!dir.exists('Figures')){dir.create('Figures')}
+
 ```
 
 ```{r getdata, include=FALSE}
+
 # download the data if not already present
 osfproject <- osf_retrieve_node("9pdyf")
 osffiles <- osf_ls_files(osfproject,path='Stage 2/Data/All the csv needed for Final_Analysis.Rmd')
@@ -802,7 +804,7 @@ Immediately afterwards, participants in the AM/PM-control groups carried out the
 
 ```{r expprocedure-pdf, include=FALSE}
 
-if (buildfigures==1){
+
 #make boxes
 immediate_group <- boxGrob(glue("Immediate Groups"),
                            txt_gp = gpar(col = "black", fontsize = 16),
@@ -1033,14 +1035,14 @@ image_wake <- magick::image_read("Figures/wake.tif")
 ggdraw() +
   draw_image(image_sleep,
              x = 0.87,
-             y = 0.4,
-             width = 0.05,
-             height = 0.05) +
+             y = 0.36,
+             width = 0.08,
+             height = 0.08) +
   draw_image(image_wake,
-             x = 0.67,
-             y = 0.4,
-             width = 0.05,
-             height = 0.05)
+             x = 0.665,
+             y = 0.36,
+             width = 0.08,
+             height = 0.08)
 
 
 
@@ -1211,7 +1213,7 @@ grid.lines(x = c(0.428, 0.572),
 
 dev.off()
 
-}
+
 
 ```
 

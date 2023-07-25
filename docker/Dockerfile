@@ -34,7 +34,6 @@ readr \
 Gmisc \
 glue \
 htmlTable \
-grid \
 magrittr \
 magick \
 cowplot
