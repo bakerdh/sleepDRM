@@ -30,4 +30,11 @@ gridExtra \
 simr \
 effsize \
 LSAfun \
-readr
+readr \
+Gmisc \
+glue \
+htmlTable \
+grid \
+magrittr \
+magick \
+cowplot

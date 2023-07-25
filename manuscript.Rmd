@@ -26,7 +26,7 @@ csl: proceedings-of-the-royal-society-b.csl
 processdata <- 0   # running all analyses from scratch takes about 6 hours
 buildfigures <- 1
 
-packagelist <- c('bookdown','knitr','rmarkdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','simr','effsize','readr','LSAfun')
+packagelist <- c('bookdown','knitr','markdown','osfr','plyr','tidyr','dplyr','emmeans','ggplot2','Rmisc','buildmer','lme4','lmerTest','stringr','effects','effectsize','ggdist','car','gridExtra','kableExtra','rstatix','LSAfun','simr','effsize','readr', 'Gmisc', 'glue', 'htmlTable', 'grid', 'magrittr', 'tidyverse', 'magick', 'cowplot')
 missingpackages <- packagelist[!packagelist %in% installed.packages()[,1]]
 if (length(missingpackages)>0){install.packages(missingpackages)}
 toinstall <- packagelist[which(!packagelist %in% (.packages()))]
@@ -34,14 +34,11 @@ invisible(lapply(toinstall,library,character.only=TRUE))
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
-```
-
-
-``` {r getdata}
-
 if (!dir.exists('data')){dir.create('data')}
 if (!dir.exists('Figures')){dir.create('Figures')}
+```
 
+```{r getdata, include=FALSE}
 # download the data if not already present
 osfproject <- osf_retrieve_node("9pdyf")
 osffiles <- osf_ls_files(osfproject,path='Stage 2/Data/All the csv needed for Final_Analysis.Rmd')
@@ -802,6 +799,422 @@ We acknowledge that previous studies in the ‘Sleep $\times$ DRM’ literature 
 The procedure of the study is summarised in Figure \@ref(fig:expprocedure). The study was hosted on Gorilla (www.gorilla.sc; [@anwyl-irvine2020a]). A study phase took approximately 11 minutes. Here, participants first gave informed consent, completed a language/attention check, rated their level of sleepiness on the Stanford Sleepiness Scale (SSS; [@hoddes1973a]), and viewed 20 DRM wordlists.
 
 Immediately afterwards, participants in the AM/PM-control groups carried out the test phase. For those in the Delay groups, the test phase took place approximately 12 hours later. Here, both the Immediate and Delay participants rated their level of sleepiness on SSS and completed a short survey concerned with, for example, morningness/eveningness preference (rMEQ; [@adan1991a]) and sleep duration/quality the night before (see **Appendix B** for the full survey). This survey helped determine whether the four groups were matched in terms of time-of-day preference and whether data from a participant needed to be discarded as a result of meeting the exclusion criteria described in section 9. Finally, the test phase concluded with a 10-minute free recall task where participants recalled as many of the words as they could from the previously seen wordlists.
+
+```{r expprocedure-pdf, include=FALSE}
+
+if (buildfigures==1){
+#make boxes
+immediate_group <- boxGrob(glue("Immediate Groups"),
+                           txt_gp = gpar(col = "black", fontsize = 16),
+                           box_gp = gpar(fill = 0, col = 0),
+                           x = .25,
+                           y = .93,
+                           bjust = "center")
+
+delay_group <- boxGrob(glue("Delay Groups"),
+                       txt_gp = gpar(col = "black", fontsize = 16),
+                       box_gp = gpar(fill = 0, col = 0),
+                       x = .75,
+                       y = .93,
+                       bjust = "center")
+
+group_am <- boxGrob(glue("AM-Control Group"),
+                    txt_gp = gpar(col = "black", fontface = "bold"),
+                    box_gp = gpar(fill = "#fee59d", col = "#fee59d"),
+                    y = .8,
+                    x = .15,
+                    width = unit(0.175, "npc"),
+                    height = unit(0.05, "npc"),
+                    bjust = "center")
+
+group_pm <- boxGrob(glue("PM-Control Group"),
+                    txt_gp = gpar(col = "black", fontface = "bold"),
+                    box_gp = gpar(fill = "#3276b4", col = "#3276b4"),
+                    y = .8,
+                    x = .35,
+                    width = unit(0.175, "npc"),
+                    height = unit(0.05, "npc"),
+                    bjust = "center")
+
+group_wake <- boxGrob(glue("Wake Group"),
+                      txt_gp = gpar(col = "black", fontface = "bold"),
+                      box_gp = gpar(fill = "#fff1ce", col = "#fff1ce"),
+                      y = .8,
+                      x = .65,
+                      width = unit(0.175, "npc"),
+                      height = unit(0.05, "npc"),
+                      bjust = "center")
+
+group_sleep <- boxGrob(glue("Sleep Group"),
+                       txt_gp = gpar(col = "black", fontface = "bold"),
+                       box_gp = gpar(fill = "#5e9cd3", col = "#5e9cd3"),
+                       y = .8,
+                       x = .85,
+                       width = unit(0.175, "npc"),
+                       height = unit(0.05, "npc"),
+                       bjust = "center")
+
+#start times
+
+start_am <- boxGrob(glue("9AM Start"),
+                    txt_gp = gpar(col = "black"),
+                    box_gp = gpar(fill = 0, col = 0),
+                    y = .7,
+                    x = .15,
+                    width = unit(0.1, "npc"),
+                    height = unit(0.05, "npc"),
+                    bjust = "top")
+
+start_pm <- boxGrob(glue("9PM Start"),
+                    txt_gp = gpar(col = "black"),
+                    box_gp = gpar(fill = 0, col = 0),
+                    y = .7,
+                    x = .35,
+                    width = unit(0.1, "npc"),
+                    height = unit(0.05, "npc"),
+                    bjust = "top")
+
+start_wake <- boxGrob(glue("9AM Start"),
+                      txt_gp = gpar(col = "black"),
+                      box_gp = gpar(fill = 0, col = 0),
+                      y = .7,
+                      x = .65,
+                      width = unit(0.1, "npc"),
+                      height = unit(0.05, "npc"),
+                      bjust = "top")
+
+start_sleep <- boxGrob(glue("9PM Start"),
+                       txt_gp = gpar(col = "black"),
+                       box_gp = gpar(fill = 0, col =0),
+                       y = .7,
+                       x = .85,
+                       width = unit(0.1, "npc"),
+                       height = unit(0.05, "npc"),
+                       bjust = "top")
+
+#Test times
+
+test_am <- boxGrob(glue("9AM Test"),
+                   txt_gp = gpar(col = "black"),
+                   box_gp = gpar(fill = 0, col = 0),
+                   y = .320,
+                   x = .15,
+                   width = unit(0.1, "npc"),
+                   height = unit(0.05, "npc"),
+                   bjust = "top")
+
+test_pm <- boxGrob(glue("9PM Test"),
+                   txt_gp = gpar(col = "black"),
+                   box_gp = gpar(fill = 0, col = 0),
+                   y = .320,
+                   x = .35,
+                   width = unit(0.1, "npc"),
+                   height = unit(0.05, "npc"),
+                   bjust = "top")
+
+test_wake <- boxGrob(glue("9PM Test"),
+                     txt_gp = gpar(col = "black"),
+                     box_gp = gpar(fill = 0, col = 0),
+                     y = .320,
+                     x = .65,
+                     width = unit(0.1, "npc"),
+                     height = unit(0.05, "npc"),
+                     bjust = "top")
+test_sleep <- boxGrob(glue("9AM Test"),
+                      txt_gp = gpar(col = "black"),
+                      box_gp = gpar(fill = 0, col =0),
+                      y = .320,
+                      x = .85,
+                      width = unit(0.1, "npc"),
+                      height = unit(0.05, "npc"),
+                      bjust = "top")
+
+study_phase <- boxGrob(glue("Study Phase"),
+                       txt_gp = gpar(col = "black", fontface = "bold", fontsize = 20),
+                       box_gp = gpar(fill = 0, col = 0),
+                       x = .5,
+                       y = .6,
+                       bjust = "center")
+
+
+
+language_check <- boxGrob(glue("Language/Attention Check"),
+                          txt_gp = gpar(col = "black", fontsize = 13),
+                          box_gp = gpar(fill = 0, col = 0),
+                          x = .5,
+                          y = .5,
+                          bjust = "center")
+
+stanford_scale <- boxGrob(glue("Stanford Sleepiness Scale (SSS)"),
+                          txt_gp = gpar(col = "black", fontsize = 13),
+                          box_gp = gpar(fill = 0, col = 0),
+                          x = 0.15,
+                          y = 0.5,
+                          width = 0.3,
+                          bjust = "center",
+                          just = "right")
+
+view_wordlist <- boxGrob(glue("View 20 DRM wordlists"),
+                         txt_gp = gpar(col = "black", fontsize = 13),
+                         box_gp = gpar(fill = 0, col = 0),
+                         x = 0.85,
+                         y = 0.5,
+                         width = 0.3,
+                         bjust = "center",
+                         just = "left")
+
+
+test_phase <- boxGrob(glue("Test Phase"),
+                      txt_gp = gpar(col = "black", fontface = "bold", fontsize = 20),
+                      box_gp = gpar(fill = 0, col = 0),
+                      x = .5,
+                      y = .22,
+                      bjust = "center")
+
+
+survey <- boxGrob(glue("Survey"),
+                  txt_gp = gpar(col = "black", fontsize = 13),
+                  box_gp = gpar(fill = 0, col = 0),
+                  x = .5,
+                  y = .12,
+                  bjust = "center")
+
+sss <- boxGrob(glue("SSS"),
+               txt_gp = gpar(col = "black", fontsize = 13),
+               box_gp = gpar(fill = 0, col = 0),
+               x = 0.257,
+               y = 0.12,
+               width = 0.1,
+               bjust = "center",
+               just = "right")
+
+free_recall <- boxGrob(glue("Free Recall"),
+                       txt_gp = gpar(col = "black", fontsize = 13),
+                       box_gp = gpar(fill = 0, col = 0),
+                       x = 0.743,
+                       y = 0.12,
+                       width = 0.1,
+                       bjust = "center",
+                       just = "right")
+
+#function for the braces
+# x1...y2 are the ends of the brace as coordinates
+# for upside down braces, x1 > x2 and y1 > y2
+# h is the height -> how much higher the peak is than the body
+curly_brace <- function(x1,y1,x2,y2,h) {
+  x2 <- x2-x1; y2 <- y2-y1
+  v1 <- viewport(x=x1,y=y1,width=sqrt(x2^2+y2^2),
+                 height=h,angle=180*atan2(y2,x2)/pi,
+                 just=c("left","bottom"),gp=gpar(col="lightblue", lwd = 2))
+  pushViewport(v1)
+  grid.curve(x2=0,y2=0,x1=.125,y1=.5,curvature=.5)
+  grid.move.to(.125,.5)
+  grid.line.to(.375,.5)
+  grid.curve(x1=.375,y1=.5,x2=.5,y2=1,curvature=.5)
+  grid.curve(x2=1,y2=0,x1=.875,y1=.5,curvature=-.5)
+  grid.move.to(.875,.5)
+  grid.line.to(.625,.5)
+  grid.curve(x2=.625,y2=.5,x1=.5,y1=1,curvature=.5)
+  popViewport()
+}
+
+
+
+#create chart
+
+pdf(file = "Figures/expprocedure.pdf",
+    width = 10,
+    height = 5)
+
+#add the images
+image_sleep <- magick::image_read("Figures/sleep.tif")
+image_wake <- magick::image_read("Figures/wake.tif")
+
+ggdraw() +
+  draw_image(image_sleep,
+             x = 0.87,
+             y = 0.4,
+             width = 0.05,
+             height = 0.05) +
+  draw_image(image_wake,
+             x = 0.67,
+             y = 0.4,
+             width = 0.05,
+             height = 0.05)
+
+
+
+#add the boxes
+immediate_group
+delay_group
+
+group_am
+group_pm
+group_wake
+group_sleep
+
+start_am
+start_pm
+start_wake
+start_sleep
+
+test_am
+test_pm
+test_wake
+test_sleep
+
+
+#draw big box around centre part
+grid.polygon(x = c(0.01,  0.99,  0.99,  0.01),
+             y = c(0.65, 0.65, 0.45, 0.45),
+             id = rep(1, 4),
+             gp = gpar(col = "black", lwd = 4))
+
+#draw smaller box around lower part
+grid.polygon(x = c(0.15, 0.85, 0.85, 0.15),
+             y = c(0.27, 0.27, 0.07, 0.07),
+             id = rep(1, 4),
+             gp = gpar(col = "black", lwd = 4))
+
+#draw arrows
+
+#from box AM-control
+grid.polygon(x = c(0.130, 0.170, 0.170, 0.185, 0.150, 0.115, 0.130),
+             y = c(0.775, 0.775, 0.725, 0.725, 0.700, 0.725, 0.725),
+             id = rep(1, 7),
+             gp = gpar(fill = "#fee59d", col = "black"), draw = TRUE)
+
+#from box PM-control
+grid.polygon(x = c(0.330, 0.370, 0.370, 0.385, 0.350, 0.315, 0.330),
+             y = c(0.775, 0.775, 0.725, 0.725, 0.700, 0.725, 0.725),
+             id = rep(1, 7),
+             gp = gpar(fill = "#3276b4", col = "black"), draw = TRUE)
+
+
+#from box Wake Group
+grid.polygon(x = c(0.630, 0.670, 0.670, 0.685, 0.650, 0.615, 0.630),
+             y = c(0.775, 0.775, 0.725, 0.725, 0.700, 0.725, 0.725),
+             id = rep(1, 7),
+             gp = gpar(fill = "#fff1ce", col = "black"), draw = TRUE)
+
+#from box Sleep Group
+grid.polygon(x = c(0.830, 0.870, 0.870, 0.885, 0.850, 0.815, 0.830),
+             y = c(0.775, 0.775, 0.725, 0.725, 0.700, 0.725, 0.725),
+             id = rep(1, 7),
+             gp = gpar(fill = "#5e9cd3", col = "black"), draw = TRUE)
+
+#lower row of arrows
+
+#from big box to 9am left
+grid.polygon(x = c(0.130, 0.170, 0.170, 0.185, 0.150, 0.115, 0.130),
+             y = c(0.447, 0.447, 0.350, 0.350, 0.320, 0.350, 0.350),
+             id = rep(1, 7),
+             gp = gpar(fill = "#fee59d", col = "black"), draw = TRUE)
+
+#from big box to 9pm left
+grid.polygon(x = c(0.330, 0.370, 0.370, 0.385, 0.350, 0.315, 0.330),
+             y = c(0.447, 0.447, 0.350, 0.350, 0.320, 0.350, 0.350),
+             id = rep(1, 7),
+             gp = gpar(fill = "#3276b4", col = "black"), draw = TRUE)
+
+#from big box to 9am right
+grid.polygon(x = c(0.630, 0.670, 0.670, 0.685, 0.650, 0.615, 0.630),
+             y = c(0.447, 0.447, 0.350, 0.350, 0.320, 0.350, 0.350),
+             id = rep(1, 7),
+             gp = gpar(fill = "#fff1ce", col = "black"), draw = TRUE)
+
+#from big box to 9pm right
+grid.polygon(x = c(0.830, 0.870, 0.870, 0.885, 0.850, 0.815, 0.830),
+             y = c(0.447, 0.447, 0.350, 0.350, 0.320, 0.350, 0.350),
+             id = rep(1, 7),
+             gp = gpar(fill = "#5e9cd3", col = "black"), draw = TRUE)
+
+study_phase
+language_check
+stanford_scale
+view_wordlist
+
+
+test_phase
+survey
+sss
+free_recall
+
+#arrows in big box
+
+#from Stanford scale to check
+grid.polygon(x = c(0.300, 0.355, 0.355, 0.375, 0.355, 0.355, 0.300),
+             y = c(0.510, 0.510, 0.530, 0.500, 0.470, 0.490, 0.490))
+
+#from check to DRM
+grid.polygon(x = c(0.625, 0.680, 0.680, 0.700, 0.680, 0.680, 0.625),
+             y = c(0.510, 0.510, 0.530, 0.500, 0.470, 0.490, 0.490))
+
+
+
+#arrows in small box
+
+#from SSS to Survey
+grid.polygon(x = c(0.365, 0.420, 0.420, 0.440, 0.420, 0.420, 0.365),
+             y = c(0.130, 0.130, 0.150, 0.120, 0.090, 0.110, 0.110))
+
+#from Survey to free recall
+grid.polygon(x = c(0.560, 0.615, 0.615, 0.635, 0.615, 0.615, 0.560),
+             y = c(0.130, 0.130, 0.150, 0.120, 0.090, 0.110, 0.110))
+
+
+#curly braces
+
+curly_brace(0.05, 0.84, 0.45, 0.84, 0.05)
+curly_brace(0.55, 0.84, 0.95, 0.84, 0.05)
+
+#delays
+grid.text("No\nDelay",
+          x = .15,
+          y = .39,
+          just = c("center"),
+          rot = 90,
+          gp = gpar(fontsize = 10))
+
+grid.text("No\nDelay",
+          x = .35,
+          y = .39,
+          just = c("center"),
+          rot = 90,
+          gp = gpar(fontsize = 10))
+
+grid.text("12-hr\nDelay",
+          x = .65,
+          y = .39,
+          just = c("center"),
+          rot = 90,
+          gp = gpar(fontsize = 10))
+
+grid.text("12-hr\nDelay",
+          x = .85,
+          y = .39,
+          just = c("center"),
+          rot = 90,
+          gp = gpar(fontsize = 10))
+
+
+#underline study phase
+grid.lines(x = c(0.418,0.582),
+           y = c(0.57),
+           gp = gpar(lwd = 3))
+
+#underline test phase
+grid.lines(x = c(0.428, 0.572),
+           y = c(0.19),
+           gp = gpar(lwd = 3))
+
+
+dev.off()
+
+}
+
+```
+
 
 ```{r expprocedure, fig.cap="Experimental procedure.", fig.align="center", include=TRUE, echo=FALSE}
 
