@@ -1,6 +1,6 @@
 These materials are a computationally reproducible version of the paper:
 
-Mak, O'Hagan, Horner & Gaskell (2023). Sleep, relative to wake, increases both veridical and false memory in the DRM paradigm: A registered report
+Mak, O'Hagan, Horner & Gaskell (2023). A registered report testing the effect of sleep on Deese-Roediger-McDermott false memory: greater lure and veridical recall but fewer intrusions after sleep. Royal Society Open Science, 10: 220595. https://doi.org/10.1098/rsos.220595
 
 The file manuscript.Rmd is an R markdown file that will perform all analyses and table creation, and produce a pdf version of the manuscript.
 
